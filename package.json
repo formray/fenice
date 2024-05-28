@@ -86,7 +86,7 @@
     "morgan": "^1.10.0",
     "multer": "^1.4.5-lts.1",
     "multer-cloud-storage": "^3.0.0",
-    "mysql2": "^3.5.1",
+    "mysql2": "^3.9.8",
     "nodemon": "^3.0.1",
     "passport": "^0.6.0",
     "passport-google-oauth20": "^2.0.0",
