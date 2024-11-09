@@ -91,7 +91,7 @@
     "passport": "^0.6.0",
     "passport-google-oauth20": "^2.0.0",
     "passport-local": "^1.0.0",
-    "pdfmake": "^0.2.7",
+    "pdfmake": "^0.2.15",
     "slugify": "^1.6.6",
     "sparkpost": "^2.1.4",
     "swagger-ui-express": "^5.0.0",
