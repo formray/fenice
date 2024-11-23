@@ -75,7 +75,7 @@
     "express-mongo-sanitize": "^2.2.0",
     "express-rate-limit": "^6.7.1",
     "express-session": "^1.17.3",
-    "firebase-admin": "^11.9.0",
+    "firebase-admin": "^13.0.0",
     "helmet": "^7.0.0",
     "http": "^0.0.1-security",
     "jsonwebtoken": "^9.0.1",
