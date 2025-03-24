@@ -60,7 +60,7 @@
     "@googlemaps/google-maps-services-js": "^3.3.33",
     "@hokify/agenda": "^6.3.0",
     "@types/morgan": "^1.9.4",
-    "axios": "^1.4.0",
+    "axios": "^1.8.3",
     "bcryptjs": "^2.4.3",
     "clean-deep": "^3.4.0",
     "compression": "^1.7.4",
