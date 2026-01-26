@@ -79,7 +79,7 @@
     "helmet": "^7.0.0",
     "http": "^0.0.1-security",
     "jsonwebtoken": "^9.0.1",
-    "lodash": "^4.17.21",
+    "lodash": "^4.17.23",
     "messagebird": "^4.0.1",
     "mongodb": "^5.7.0",
     "mongoose": "^7.3.3",
