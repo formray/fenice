@@ -3,6 +3,7 @@ import { apiReference } from '@scalar/hono-api-reference';
 import { healthRouter } from './routes/health.routes.js';
 import { authRouter } from './routes/auth.routes.js';
 import { userRouter } from './routes/user.routes.js';
+import { mcpRouter } from './routes/mcp.routes.js';
 import { requestId } from './middleware/requestId.js';
 import { requestLogger } from './middleware/requestLogger.js';
 import { authMiddleware } from './middleware/auth.js';
@@ -25,6 +26,7 @@ app.use('/api/v1/users/*', authMiddleware);
 app.route('/api/v1', healthRouter);
 app.route('/api/v1', authRouter);
 app.route('/api/v1', userRouter);
+app.route('/api/v1', mcpRouter);
 
 // --- Security scheme ---
 app.openAPIRegistry.registerComponent('securitySchemes', 'Bearer', {
