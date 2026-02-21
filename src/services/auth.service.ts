@@ -12,7 +12,9 @@ export class AuthService {
     private readonly accessExpiry: string,
     private readonly refreshExpiry: string,
     private readonly emailAdapter?: EmailAdapter | undefined,
-    private readonly clientUrl?: string | undefined
+    private readonly clientUrl?: string | undefined,
+    private readonly lockoutThreshold = 5,
+    private readonly lockoutDurationMs = 900_000
   ) {}
 
   async signup(data: Signup): Promise<{ user: UserDocument; tokens: AuthTokens }> {
@@ -53,8 +55,23 @@ export class AuthService {
       throw new NotAuthorizedError('Invalid credentials');
     }
 
+    // Check account lockout
+    if (user.lockoutUntil && user.lockoutUntil > new Date()) {
+      throw new AppError(
+        429,
+        'ACCOUNT_LOCKED',
+        'Account is temporarily locked. Please try again later.'
+      );
+    }
+
     const isMatch = await user.comparePassword(data.password);
     if (!isMatch) {
+      // Increment failed attempts
+      user.failedLoginAttempts += 1;
+      if (user.failedLoginAttempts >= this.lockoutThreshold) {
+        user.lockoutUntil = new Date(Date.now() + this.lockoutDurationMs);
+      }
+      await user.save();
       throw new NotAuthorizedError('Invalid credentials');
     }
 
@@ -62,6 +79,9 @@ export class AuthService {
       throw new AppError(403, 'EMAIL_NOT_VERIFIED', 'Please verify your email before logging in');
     }
 
+    // Reset failed login attempts on success
+    user.failedLoginAttempts = 0;
+    user.lockoutUntil = undefined;
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
     (user as any).lastLoginDate = new Date();
     const tokens = this.generateTokens(user);

@@ -29,7 +29,9 @@ function getAuthService(): AuthService {
       env.JWT_ACCESS_EXPIRY,
       env.JWT_REFRESH_EXPIRY,
       adapters.email,
-      env.CLIENT_URL
+      env.CLIENT_URL,
+      env.LOCKOUT_THRESHOLD,
+      env.LOCKOUT_DURATION_MS
     );
   }
   return authService;

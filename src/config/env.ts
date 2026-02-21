@@ -42,6 +42,10 @@ export const EnvSchema = z.object({
   WS_HEARTBEAT_INTERVAL_MS: z.coerce.number().default(30_000),
   WS_HEARTBEAT_TIMEOUT_MS: z.coerce.number().default(10_000),
   WS_MESSAGE_RATE_LIMIT: z.coerce.number().default(60),
+
+  // Account Lockout
+  LOCKOUT_THRESHOLD: z.coerce.number().default(5),
+  LOCKOUT_DURATION_MS: z.coerce.number().default(900_000), // 15 minutes
 });
 
 export type Env = z.infer<typeof EnvSchema>;
