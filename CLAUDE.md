@@ -6,7 +6,7 @@
 
 - **Repository:** `https://github.com/formray/fenice`
 - **Organization:** Formray
-- **Version:** 0.1.0
+- **Version:** 0.1.0 (tagged `v0.1.0` on `main`)
 - **License:** MIT
 - **Author:** Giuseppe Albrizio
 
@@ -150,7 +150,7 @@ Vendor-independent abstractions for external services:
 
 - **Framework:** Vitest v4 with `globals: true`
 - **Property testing:** fast-check for schema validation properties
-- **Coverage:** v8 provider, 80% thresholds (lines, branches, functions, statements)
+- **Coverage:** v8 provider, thresholds at 60/40/50/60 (stmts/branches/funcs/lines). DB-dependent files (services, models, production adapters) excluded — need MongoDB integration tests.
 - **Test structure:** `tests/unit/`, `tests/integration/`, `tests/properties/`
 - **Current status:** 35 tests across 11 test files, all passing
 - **TDD preferred:** Write tests alongside or before implementation
@@ -170,6 +170,18 @@ Vendor-independent abstractions for external services:
 6. **OTel `@opentelemetry/instrumentation-fs` disabled** — The filesystem instrumentation is disabled to avoid excessive noise in traces.
 
 7. **`ATTR_SERVICE_NAME` semantic convention** — Use `ATTR_SERVICE_NAME` from `@opentelemetry/semantic-conventions` (not the old `SemanticResourceAttributes.SERVICE_NAME`).
+
+8. **Scalar `url` not `spec.url`** — `@scalar/hono-api-reference` uses `url: '/openapi'` at top level, not the deprecated `spec: { url: '/openapi' }`.
+
+9. **fast-check `emailAddress()` vs Zod v4** — fast-check generates RFC-compliant emails with special chars that Zod v4 rejects. Filter generated emails through `z.string().email().safeParse()` in property tests.
+
+## CI Pipeline
+
+GitHub Actions (`.github/workflows/ci.yml`): Lint → Typecheck → Test (with coverage) → Build
+- Runs on: push to `main`/`development`, PRs to `main`/`development`
+- MongoDB 7 service container for integration tests
+- CI env vars: `NODE_ENV=test`, `MONGODB_URI`, `JWT_SECRET`, `JWT_REFRESH_SECRET` set in workflow
+- `npm run test:coverage` enforces coverage thresholds in CI (not just `npm test`)
 
 ## Environment Variables
 
