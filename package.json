@@ -1,6 +1,6 @@
 {
   "name": "fenice",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "AI-native, production-ready backend starter — Formray Engineering Guidelines compliant",
   "type": "module",
   "main": "dist/index.js",
