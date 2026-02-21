@@ -125,7 +125,7 @@ export class WorldWsManager {
    * the requested seq has been evicted from the buffer.
    */
   getBufferedMessagesFrom(fromSeq: number): BufferedMessage[] | null {
-    if (this.buffer.length === 0) return [];
+    if (this.buffer.length === 0) return null;
 
     const oldest = this.buffer[0];
     if (!oldest || fromSeq < oldest.seq) return null;
