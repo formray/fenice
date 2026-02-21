@@ -131,9 +131,6 @@ dist
 
 
 build
-docs
-docs/
-
 
 src/config/gcloud/google-web-client-secret.json
 src/config/gcloud/google-application-credentials.json
