@@ -32,7 +32,7 @@ export const authMiddleware = createMiddleware(async (c, next) => {
     throw new NotAuthorizedError('Invalid authorization format');
   }
 
-  const token = parts[1]!;
+  const token = parts[1] ?? '';
 
   try {
     const payload = jwt.verify(token, getJwtSecret()) as JwtPayload;

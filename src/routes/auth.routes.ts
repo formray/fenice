@@ -10,7 +10,7 @@ import {
 import { ErrorResponseSchema } from '../schemas/common.schema.js';
 import { loadEnv } from '../config/env.js';
 import type { UserDocument } from '../models/user.model.js';
-import type { AuthResponse, AuthTokens } from '../schemas/auth.schema.js';
+import type { AuthResponse } from '../schemas/auth.schema.js';
 
 // Lazy-init pattern: avoid running loadEnv() at import time (breaks tests)
 let authService: AuthService | null = null;

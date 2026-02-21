@@ -58,7 +58,7 @@ const userSchema = new Schema<UserDocument>(
   {
     timestamps: true,
     toJSON: {
-      transform: (_doc, ret: Record<string, unknown>) => {
+      transform: (_doc: unknown, ret: Record<string, unknown>): Record<string, unknown> => {
         ret['id'] = String(ret['_id']);
         delete ret['_id'];
         delete ret['__v'];

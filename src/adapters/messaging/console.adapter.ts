@@ -1,7 +1,7 @@
 import type { MessagingAdapter } from './types.js';
 
 export class ConsoleMessagingAdapter implements MessagingAdapter {
-  async send(options: {
+  send(options: {
     to: string;
     title: string;
     body: string;
@@ -12,5 +12,6 @@ export class ConsoleMessagingAdapter implements MessagingAdapter {
     if (options.data) {
       console.warn(`[PUSH] Data: ${JSON.stringify(options.data)}`);
     }
+    return Promise.resolve();
   }
 }

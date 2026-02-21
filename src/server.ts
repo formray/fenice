@@ -15,17 +15,20 @@ async function start(): Promise<void> {
     await mongoose.connect(env.MONGODB_URI);
     logger.info('Connected to MongoDB');
 
-    serve({
-      fetch: app.fetch,
-      port: env.PORT,
-      hostname: env.HOST,
-    }, (info) => {
-      logger.info(`FENICE is running on http://${env.HOST}:${info.port}`);
-    });
+    serve(
+      {
+        fetch: app.fetch,
+        port: env.PORT,
+        hostname: env.HOST,
+      },
+      (info) => {
+        logger.info(`FENICE is running on http://${env.HOST}:${info.port}`);
+      }
+    );
   } catch (error) {
     logger.error({ error }, 'Failed to start server');
     process.exit(1);
   }
 }
 
-start();
+void start();

@@ -11,11 +11,7 @@ export class LocalStorageAdapter implements StorageAdapter {
     this.baseDir = baseDir;
   }
 
-  async upload(
-    key: string,
-    data: Buffer,
-    _contentType: string,
-  ): Promise<string> {
+  async upload(key: string, data: Buffer, _contentType: string): Promise<string> {
     const filePath = join(this.baseDir, key);
     await mkdir(dirname(filePath), { recursive: true });
     await writeFile(filePath, data);
@@ -32,12 +28,9 @@ export class LocalStorageAdapter implements StorageAdapter {
     await unlink(filePath);
   }
 
-  async getSignedUrl(
-    key: string,
-    _expiresInSeconds?: number,
-  ): Promise<string> {
+  getSignedUrl(key: string, _expiresInSeconds?: number): Promise<string> {
     // Local filesystem has no concept of signed URLs — return file path
     const filePath = join(this.baseDir, key);
-    return `file://${filePath}`;
+    return Promise.resolve(`file://${filePath}`);
   }
 }

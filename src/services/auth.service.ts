@@ -39,7 +39,8 @@ export class AuthService {
       throw new NotAuthorizedError('Invalid credentials');
     }
 
-    user.lastLoginDate = new Date() as unknown as string;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+    (user as any).lastLoginDate = new Date();
     const tokens = this.generateTokens(user);
     user.refreshToken = tokens.refreshToken;
     await user.save();
@@ -69,17 +70,13 @@ export class AuthService {
   private generateTokens(user: UserDocument): AuthTokens {
     const userId = user._id.toString();
 
-    const accessToken = jwt.sign(
-      { userId, email: user.email, role: user.role },
-      this.jwtSecret,
-      { expiresIn: this.accessExpiry } as SignOptions
-    );
+    const accessToken = jwt.sign({ userId, email: user.email, role: user.role }, this.jwtSecret, {
+      expiresIn: this.accessExpiry,
+    } as SignOptions);
 
-    const refreshToken = jwt.sign(
-      { userId },
-      this.jwtRefreshSecret,
-      { expiresIn: this.refreshExpiry } as SignOptions
-    );
+    const refreshToken = jwt.sign({ userId }, this.jwtRefreshSecret, {
+      expiresIn: this.refreshExpiry,
+    } as SignOptions);
 
     return {
       accessToken,

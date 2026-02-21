@@ -76,12 +76,12 @@ export function generateLlmDocs(spec: Record<string, unknown>): string {
 
         // Parameters
         const parameters = operation['parameters'] as
-          | Array<{
+          | {
               name?: string;
               in?: string;
               required?: boolean;
               schema?: Record<string, unknown>;
-            }>
+            }[]
           | undefined;
         if (parameters && parameters.length > 0) {
           for (const param of parameters) {
@@ -94,15 +94,19 @@ export function generateLlmDocs(spec: Record<string, unknown>): string {
 
         // Responses
         const responses = operation['responses'] as
-          | Record<string, { description?: string; content?: Record<string, { schema?: Record<string, unknown> }> }>
+          | Record<
+              string,
+              {
+                description?: string;
+                content?: Record<string, { schema?: Record<string, unknown> }>;
+              }
+            >
           | undefined;
         if (responses) {
           for (const [statusCode, response] of Object.entries(responses)) {
             const desc = response.description ?? '';
             const jsonResp = response.content?.['application/json'];
-            const respSchema = jsonResp?.schema
-              ? formatSchemaCompact(jsonResp.schema)
-              : '';
+            const respSchema = jsonResp?.schema ? formatSchemaCompact(jsonResp.schema) : '';
             const parts = [`- Response ${statusCode}`];
             if (desc) parts.push(desc);
             if (respSchema) parts.push(`-> ${respSchema}`);
@@ -140,9 +144,7 @@ function formatSchemaCompact(schema: Record<string, unknown>): string {
   const type = schema['type'] as string | undefined;
 
   if (type === 'object') {
-    const properties = schema['properties'] as
-      | Record<string, unknown>
-      | undefined;
+    const properties = schema['properties'] as Record<string, unknown> | undefined;
     if (properties) {
       const keys = Object.keys(properties);
       return `{ ${keys.join(', ')} }`;

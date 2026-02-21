@@ -1,9 +1,9 @@
 import type { MessagingAdapter } from './types.js';
 
 export class FcmMessagingAdapter implements MessagingAdapter {
-  constructor(private readonly serviceAccountPath: string) {}
+  constructor(private readonly _serviceAccountPath: string) {}
 
-  async send(options: {
+  send(options: {
     to: string;
     title: string;
     body: string;
@@ -11,8 +11,8 @@ export class FcmMessagingAdapter implements MessagingAdapter {
   }): Promise<void> {
     // Firebase Cloud Messaging integration placeholder
     // npm install firebase-admin when ready for production
-    throw new Error(
-      `FCM adapter not yet implemented. Would send to: ${options.to}`,
+    return Promise.reject(
+      new Error(`FCM adapter not yet implemented. Would send to: ${options.to}`)
     );
   }
 }

@@ -7,7 +7,7 @@ export function errorResponse(
   code: string,
   message: string,
   requestId: string,
-  details?: Array<{ field?: string; message: string }>
+  details?: { field?: string; message: string }[]
 ): ErrorResponse {
   return {
     error: {
@@ -39,8 +39,5 @@ export function handleError(err: Error, c: Context): Response {
 
   // Unknown error
   console.error('Unhandled error:', err);
-  return c.json(
-    errorResponse('INTERNAL_ERROR', 'An unexpected error occurred', requestId),
-    500
-  );
+  return c.json(errorResponse('INTERNAL_ERROR', 'An unexpected error occurred', requestId), 500);
 }
