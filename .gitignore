@@ -33,6 +33,9 @@ Thumbs.db
 .claude/
 .worktrees/
 
+# Serena MCP
+.serena/
+
 # Docker
 .docker/
 
