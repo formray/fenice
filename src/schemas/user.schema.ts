@@ -9,6 +9,7 @@ export const UserSchema = z.object({
   fullName: z.string().min(1).max(100),
   role: RoleEnum.default('user'),
   active: z.boolean().default(true),
+  emailVerified: z.boolean().default(false),
   pictureUrl: z.string().url().optional(),
   lastLoginDate: z.string().datetime().optional(),
   createdAt: z.string().datetime(),

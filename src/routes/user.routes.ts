@@ -32,6 +32,7 @@ function serializeUser(user: UserDocument): User {
     fullName: json['fullName'] as string,
     role: json['role'] as User['role'],
     active: json['active'] as boolean,
+    emailVerified: json['emailVerified'] === true,
     createdAt: String(json['createdAt']),
     updatedAt: String(json['updatedAt']),
   };
@@ -46,7 +47,7 @@ const listUsersRoute = createRoute({
   summary: 'List users with pagination and filtering',
   security: [{ Bearer: [] }],
   request: {
-    query: CursorPaginationSchema.merge(UserQuerySchema),
+    query: CursorPaginationSchema.extend(UserQuerySchema.shape),
   },
   responses: {
     200: {
