@@ -1,4 +1,4 @@
-interface WsConnection {
+export interface WsConnection {
   send(data: string): void;
   close(): void;
   readyState: number;

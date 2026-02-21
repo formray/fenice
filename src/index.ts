@@ -1,10 +1,12 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
+import { createNodeWebSocket } from '@hono/node-ws';
 import { apiReference } from '@scalar/hono-api-reference';
 import { healthRouter } from './routes/health.routes.js';
 import { authRouter } from './routes/auth.routes.js';
 import { userRouter } from './routes/user.routes.js';
 import { mcpRouter } from './routes/mcp.routes.js';
 import { uploadRouter } from './routes/upload.routes.js';
+import { createWsRouter } from './routes/ws.routes.js';
 import { requestId } from './middleware/requestId.js';
 import { requestLogger } from './middleware/requestLogger.js';
 import { authMiddleware } from './middleware/auth.js';
@@ -14,6 +16,13 @@ import { apiVersion } from './middleware/api-version.js';
 import { generateLlmDocs } from './utils/llm-docs.js';
 
 export const app = new OpenAPIHono();
+
+const nodeWs = createNodeWebSocket({ app });
+
+/** Re-export bound to avoid ESLint unbound-method with destructured method. */
+export function injectWebSocket(...args: Parameters<typeof nodeWs.injectWebSocket>): void {
+  nodeWs.injectWebSocket(...args);
+}
 
 // Global middleware
 app.use('*', requestId);
@@ -40,6 +49,7 @@ app.route('/api/v1', authRouter);
 app.route('/api/v1', userRouter);
 app.route('/api/v1', mcpRouter);
 app.route('/api/v1', uploadRouter);
+app.route('/api/v1', createWsRouter(nodeWs.upgradeWebSocket));
 
 // --- Security scheme ---
 app.openAPIRegistry.registerComponent('securitySchemes', 'Bearer', {
