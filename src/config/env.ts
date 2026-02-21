@@ -52,6 +52,10 @@ export const EnvSchema = z.object({
 
   // Body Size Limit
   BODY_SIZE_LIMIT_BYTES: z.coerce.number().default(1_048_576), // 1MB
+
+  // World WS
+  WORLD_WS_BUFFER_SIZE: z.coerce.number().default(1000),
+  WORLD_WS_RESUME_TTL_MS: z.coerce.number().default(300_000), // 5 minutes
 });
 
 export type Env = z.infer<typeof EnvSchema>;

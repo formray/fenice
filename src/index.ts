@@ -10,6 +10,7 @@ import { userRouter } from './routes/user.routes.js';
 import { mcpRouter } from './routes/mcp.routes.js';
 import { uploadRouter } from './routes/upload.routes.js';
 import { createWsRouter } from './routes/ws.routes.js';
+import { createWorldWsRouter } from './routes/world-ws.routes.js';
 import { requestId } from './middleware/requestId.js';
 import { requestLogger } from './middleware/requestLogger.js';
 import { authMiddleware } from './middleware/auth.js';
@@ -81,6 +82,7 @@ app.route('/api/v1', userRouter);
 app.route('/api/v1', mcpRouter);
 app.route('/api/v1', uploadRouter);
 app.route('/api/v1', createWsRouter(nodeWs.upgradeWebSocket));
+app.route('/api/v1', createWorldWsRouter(nodeWs.upgradeWebSocket, app));
 
 // --- Security scheme ---
 app.openAPIRegistry.registerComponent('securitySchemes', 'Bearer', {
