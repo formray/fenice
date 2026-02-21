@@ -1,6 +1,6 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { createNodeWebSocket } from '@hono/node-ws';
-import { apiReference } from '@scalar/hono-api-reference';
+import { Scalar } from '@scalar/hono-api-reference';
 import { healthRouter } from './routes/health.routes.js';
 import { authRouter } from './routes/auth.routes.js';
 import { userRouter } from './routes/user.routes.js';
@@ -73,7 +73,7 @@ app.doc('/openapi', {
 // --- Scalar interactive docs ---
 app.get(
   '/docs',
-  apiReference({
+  Scalar({
     theme: 'kepler',
     url: '/openapi',
   })
