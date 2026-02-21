@@ -1,189 +1,170 @@
-[![CircleCI](https://dl.circleci.com/status-badge/img/gh/giuseppealbrizio/typescript-rest-api-backend/tree/main.svg?style=svg&circle-token=a73f0879b6f17258a912820c3082a572d49d4ff6)](https://dl.circleci.com/status-badge/redirect/gh/giuseppealbrizio/typescript-rest-api-backend/tree/main)
+# FENICE
 
-[![Code Style: Google](https://img.shields.io/badge/code%20style-google-blueviolet.svg)](https://github.com/google/gts)
+**AI-native, production-ready backend platform.**
+
+[![Node.js 22](https://img.shields.io/badge/Node.js-22_LTS-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![Hono](https://img.shields.io/badge/Hono-4.x-E36002?logo=hono&logoColor=white)](https://hono.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Zod](https://img.shields.io/badge/Zod-v4-3E67B1?logo=zod&logoColor=white)](https://zod.dev/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-7-47A248?logo=mongodb&logoColor=white)](https://www.mongodb.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://github.com/Envoy-VC/awesome-badges)
-[![Kubernets](https://img.shields.io/badge/kubernetes-%23326ce5.svg?style=for-the-badge&logo=kubernetes&logoColor=white)](https://github.com/Envoy-VC/awesome-badges)
-
-# Typescript REST API Backend Template
-
-## Feel free to support this project
-
-If you found this project helpful, please consider supporting me by buying me a coffee! Your support will help me to keep creating more useful content and improving this project.
-
-[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/galbrizio)
+FENICE (Italian for "phoenix") is a backend starter platform built on the **2026 Golden Stack**. It provides a complete foundation for production REST APIs with authentication, user management, AI agent discovery, and observability built in from the start.
 
 ---
 
-#### Typescript REST microservice boilerplate using node.js and express and some other cool stuff
+## Features
 
-This template is intended to be used as single service in a REST multi-service application using Cloud Pub/Sub as
-message broker
+- **Hono + Zod OpenAPI** -- Type-safe routes with automatic OpenAPI 3.1 spec generation
+- **Zod v4 as Single Source of Truth** -- One schema drives validation, TypeScript types, and API documentation
+- **Mongoose v9 + MongoDB** -- Production-ready data layer with bcrypt password hashing
+- **JWT Authentication** -- Access + refresh token flow with configurable expiry
+- **MCP Server Endpoint** -- Model Context Protocol discovery for AI agent integration
+- **Scalar Interactive Docs** -- Beautiful API documentation UI at `/docs`
+- **LLM-Readable Docs** -- Markdown API reference optimized for AI consumption at `/docs/llm`
+- **OpenTelemetry** -- Auto-instrumented distributed tracing
+- **Pino Structured Logging** -- JSON logging with request correlation
+- **Adapter Pattern** -- Vendor-independent abstractions for email (Resend), storage (GCS), messaging (FCM)
+- **Vitest + fast-check** -- Modern testing with property-based testing support
+- **Docker Multi-Stage Build** -- Optimized production images with health checks
+- **GitHub Actions CI** -- Lint, typecheck, test, and build on every push
+- **Four-Script Pattern** -- `setup.sh`, `dev.sh`, `stop.sh`, `reset.sh` for consistent workflows
+- **Husky + lint-staged** -- Pre-commit quality enforcement
 
-use in local with Skaffold and in cloud with GKE
-
-To know more about how to implement GKE and run with Skaffold please refer to this folder:
-
-`./infra`
-
-The application uses express as framework and is configured with the following features:
-
-- `ECMA2022` features enabled
-- `Dotenv` Load environment variables from .env file
-- `Eslint` Code quality tool
-- `Prettier` to prettify the code
-- `MongoDB` ready to go configuration with mongoose
-- `MySQL` ready to go configuration with mysql2
-- `CORS` feature enabled
-- `RBAC` logic to authorize people with specific roles to use the endpoints.
-- `Passport` logic to add an authentication layer if neeeded.
-- `Sparkpost` email service support with sparkpost.
-- `Error Handling` errors custom middleware and helpers globally configured
-- `Multer` File uploading configured to use in routes as middleware
-- `Google Cloud Storage` middleware configured to use Google Cloud Storage as upload bucket
-- `Google Cloud Pub/Sub` pub/sub support for event driven events added
-- `Axios` globally configured in `./src/utils/api.utils.js`
-- `Swagger` documentation reachable at `http://localhost:3000/api/v1/docs`
-- `Jest` Testing tool support
-- `Logger` Logging support with Winston
-- `Docker` ready configuration with multi-stage option
-- `Terraform` ready configuration to instantiate infrastracture in GCP
-- `Agenda` ready to emit events through agenda jobs
-- `Best practices` in naming files
-
-## Basic Information
-
-- App entry point is located in `./src/index.ts`
-
-- Server config entrypoint is located in `./src/bin/server.ts`
-
-- Prettier config is located at `./.prettierrc.js`
-
-- Eslint config is located at `./.eslintrc`
-
-- Sparkpost service support is located at `./src/services/email/sparkport.service.ts`
-
-  - You can define your own email services in this file
-
-- Mongo config is located at `./src/config/mongodb.config.ts`
-
-- MYSQL config is located at `./src/config/mysql.config.ts`
-
-- Error Handling middleware is located at `./src/middlewares/errorHandler.middleware.ts`
-
-  - You can configure as many errors you need in `./src/errors/`
-
-- Multer middleware is located at `./src/middlewares/upload.middleware.ts`
-
-  - If you want to use Google Cloud Storage as upload bucket follow instructions at `./src/config/gcloud/README.md`
-
-- RBAC logic middleware is located at `./src/middlewares/verifyApiRights.middleware.ts`
-
-- Swagger config file is located at `./src/api/swagger/swagger.route.js`
-
-  - Swagger routes are defined in `./src/api/swagger/swagger.route.ts`
-
-- Docker config is located at `./Dockerfile`
-
-- Pub/Sub service is located at `./src/services/pubsub/pub-sub.service.js`
-
-## Folder Structure
-
-> `infra/`
->
-> - **For more information about the k8s configuration please check the README file**
-> - **`k8s`** - folder contains all production kubernetes manifests
-> - **`k8s-dev`** - folder contains all development kubernetes manifests to run with skaffold
-> - **`scripts`** - older contains all script related to the creation of a cluster or running skaffold or secret
->   creation
->
-> `src/`
->
-> - **`api/`** - containing all api logic with model, services, controller and routes
-> - **`bin/`** - server configuration folder
-> - **`config/`** - this folder contains all the configs file (database, passport, etc...)
-> - **`constants/`** - this folder contains all the global constants
-> - **`logs/`** - the logger file will be stored here
-> - **`helpers/`** - some helpers func i.e. an error helper that returns json everytime an error comes in
-> - **`middlewares/`** - here you can find all the custom middlewares
-> - **`services/`** - here we store all the services; i.e. here we define methods to manipulate a db model entity
-> - **`tests/`** - here we store all the jest test
-> - **`utils/`** - containing some utils function to be reused in the code (i.e. axios global configuration)
-
-## Getting Started
-
-Copy the .env.example to .env. Be sure to fill all the global variables. Alternatively you can use the script `generate-env.sh` in the scripts folder. This script will generate a `.env.test.local` and you can copy this file to .env
+## Quick Start
 
 ```bash
-cp env.example .env
+# Clone and enter
+git clone https://github.com/formray/fenice.git
+cd fenice
+
+# Setup (installs deps, creates .env)
+./setup.sh
+
+# Start development (MongoDB via Docker + dev server)
+./dev.sh
+
+# Visit the API docs
+open http://localhost:3000/docs
 ```
 
-Then replace:
+See [QUICKSTART.md](QUICKSTART.md) for a detailed walkthrough.
 
-1. `MONGO_URI` string with your Mongo connection
-   1. `MONGO_URI_TEST` string with your Mongo Test connection
-2. `MYSQL_HOST_STAGE` string with your mysql host name
-   - `MYSQL_USER_STAGE` string with your mysql username
-   - `MYSQL_PASSWORD_STAGE` string with your mysql password name
-   - `MYSQL_DB_STAGE` string with your mysql db name
-   - `MYSQL_SOCKET_STAGE` string with your mysql socket name
-3. `GOOGLE_APPLICATION_CREDENTIALS` path with yours
-4. `GOOGLE_PROJECT_ID` with yours
-5. `SENDGRID_API_KEY` with yours
-6. `SENDGRID_SENDER_EMAIL` with yours
+## API Endpoints
 
-In order to Google Cloud Storage works follow instructions located in `./src/config/gcloud/README.md`
+| Method | Path                        | Auth | Description                       |
+| ------ | --------------------------- | ---- | --------------------------------- |
+| GET    | `/api/v1/health`            | No   | Liveness check                    |
+| GET    | `/api/v1/health/detailed`   | No   | Readiness check with dependencies |
+| POST   | `/api/v1/auth/signup`       | No   | Register a new user               |
+| POST   | `/api/v1/auth/login`        | No   | Authenticate user                 |
+| POST   | `/api/v1/auth/refresh`      | No   | Refresh access token              |
+| GET    | `/api/v1/users/me`          | Yes  | Get current user profile          |
+| GET    | `/api/v1/users/:id`         | Yes  | Get user by ID                    |
+| PATCH  | `/api/v1/users/:id`         | Yes  | Update user profile               |
+| DELETE | `/api/v1/users/:id`         | Yes  | Delete user (admin only)          |
+| GET    | `/api/v1/mcp`               | No   | MCP discovery manifest            |
+| GET    | `/openapi`                  | No   | OpenAPI 3.1 JSON specification    |
+| GET    | `/docs`                     | No   | Scalar interactive API docs       |
+| GET    | `/docs/llm`                 | No   | LLM-readable Markdown docs        |
+
+## Architecture
+
+```
+Client Request
+  -> Middleware (requestId, requestLogger)
+  -> Auth Middleware (JWT, on protected routes)
+  -> OpenAPI Route (Zod validation)
+  -> Service (business logic)
+  -> Mongoose Model (MongoDB)
+  -> JSON Response
+```
+
+**Key design decisions:**
+
+- **Hono over Express** -- Modern, edge-ready framework with first-class OpenAPI support
+- **Zod as SSoT** -- One schema for validation, types, and documentation eliminates drift
+- **Adapter pattern** -- Swap email/storage/messaging providers without touching business logic
+- **MCP endpoint** -- AI agents discover and use the API without human documentation
+- **OpenTelemetry** -- Vendor-neutral observability from day one
+
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed architecture decisions.
+
+## Project Structure
+
+```
+src/
+  index.ts              # Hono app (routes, middleware, OpenAPI, Scalar)
+  server.ts             # Entry point (MongoDB connect, @hono/node-server)
+  instrumentation.ts    # OpenTelemetry auto-instrumentation
+  config/env.ts         # Zod-validated environment variables
+  schemas/              # Zod schemas (SSoT for types + validation + OpenAPI)
+  models/               # Mongoose models
+  services/             # Business logic layer
+  routes/               # OpenAPI route definitions
+  middleware/            # Auth, error handling, logging, request ID
+  adapters/             # Email, storage, messaging abstractions
+  utils/                # Errors, logger, LLM docs generator
+tests/
+  unit/                 # Unit tests (schemas, config, errors, adapters)
+  integration/          # Integration tests (health, auth, docs, MCP)
+  properties/           # fast-check property-based tests
+```
+
+## Scripts
+
+```bash
+# Development
+npm run dev              # tsx watch with OTel instrumentation
+npm run dev:typecheck    # tsc --noEmit --watch
+
+# Quality
+npm run lint             # ESLint
+npm run typecheck        # TypeScript type checking
+npm run validate         # lint + typecheck + test
+
+# Testing
+npm run test             # Vitest single run
+npm run test:watch       # Vitest watch mode
+npm run test:coverage    # Vitest with coverage
+
+# Build
+npm run build            # TypeScript compilation
+npm run start            # Production server
+
+# Shell scripts
+./setup.sh               # First-time setup
+./dev.sh                 # Start MongoDB + dev server
+./stop.sh                # Stop Docker services
+./reset.sh               # Full clean and reinstall
+```
+
+## Documentation
+
+| File                                           | Purpose                          |
+| ---------------------------------------------- | -------------------------------- |
+| [CLAUDE.md](CLAUDE.md)                         | AI agent context file            |
+| [AGENTS.md](AGENTS.md)                         | Machine-readable agent guide     |
+| [QUICKSTART.md](QUICKSTART.md)                 | Zero-to-running guide            |
+| [CONTRIBUTING.md](CONTRIBUTING.md)             | Contribution guidelines          |
+| [CHANGELOG.md](CHANGELOG.md)                   | Version history                  |
+| [ROADMAP.md](ROADMAP.md)                       | Future plans                     |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)   | Architecture decisions           |
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. In brief:
+
+1. Fork the repo
+2. Create a feature branch
+3. Write tests (TDD preferred)
+4. Ensure `npm run validate` passes
+5. Submit a PR with Conventional Commits
+
+## License
+
+[MIT](LICENSE) -- Copyright (c) 2023 Giuseppe Albrizio
 
 ---
 
-To get started with this repo npm install in the root folder
-
-```bash
-npm install
-```
-
-To getting started with a dev environment. Here we use nodemon and babel-node to restart the server asa we change
-something
-
-```bash
-npm run start:dev
-```
-
-To compile the code and create a production build
-
-```bash
-npm run compile
-```
-
-This command will create a build in the root directory
-
-To start with a production ready build you can run this command
-
-```bash
-# This set the NODE_ENV to production, npm-run-all, create a build and run the server command
-npm run start
-```
-
-If you have a build and you want to node the build you can run
-
-```bash
-# This command launch the node instance inside the ./build/bin/server
-npm run server
-```
-
-## Docker Ready
-
-### Here we use the multistage build to optimize speed and size of the final image
-
-If you use Docker and wanna dockerize the app you can run the command
-
-```bash
-docker build -t <dockerhubusername>/<docker-image-name>:<tag> .
-```
-
-then
-
-```bash
-docker run --name <docker-process-name> -d - p 3000:3000 <dockerhubusername>/<docker-image-name>:<tag>
-```
+Built with care by [Formray](https://github.com/formray).

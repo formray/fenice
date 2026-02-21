@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/scripts/lib.sh"
+
+echo -e "\n${BLUE}🔥 FENICE Setup${NC}\n"
+
+# Check prerequisites
+info "Checking prerequisites..."
+check_command node
+check_command npm
+check_command docker
+
+# Check Node.js version
+NODE_VERSION=$(node -v | cut -d'v' -f2 | cut -d'.' -f1)
+if [ "$NODE_VERSION" -lt 22 ]; then
+  error "Node.js 22+ required (found v$(node -v))"
+  exit 1
+fi
+success "Node.js $(node -v)"
+
+# Install dependencies
+info "Installing dependencies..."
+npm ci
+success "Dependencies installed"
+
+# Copy .env if not exists
+if [ ! -f .env ]; then
+  info "Creating .env from .env.example..."
+  cp .env.example .env
+  success ".env created — please update with your values"
+else
+  success ".env already exists"
+fi
+
+echo -e "\n${GREEN}✓ Setup complete!${NC}"
+echo -e "  Run ${BLUE}./dev.sh${NC} to start development"

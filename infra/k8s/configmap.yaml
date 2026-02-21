@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fenice-config
+  labels:
+    app: fenice
+data:
+  NODE_ENV: 'production'
+  HOST: '0.0.0.0'
+  PORT: '3000'
+  LOG_LEVEL: 'info'
+  SERVICE_NAME: 'fenice'
+  JWT_ACCESS_EXPIRY: '15m'
+  JWT_REFRESH_EXPIRY: '7d'
