@@ -1,9 +1,12 @@
 import type { EmailAdapter } from './email/types.js';
-import type { StorageAdapter } from './storage/types.js';
 import type { MessagingAdapter } from './messaging/types.js';
+import type { StorageAdapter } from './storage/types.js';
 import { ConsoleEmailAdapter } from './email/console.adapter.js';
-import { LocalStorageAdapter } from './storage/local.adapter.js';
+import { ResendEmailAdapter } from './email/resend.adapter.js';
 import { ConsoleMessagingAdapter } from './messaging/console.adapter.js';
+import { FcmMessagingAdapter } from './messaging/fcm.adapter.js';
+import { LocalStorageAdapter } from './storage/local.adapter.js';
+import { GcsStorageAdapter } from './storage/gcs.adapter.js';
 
 export interface Adapters {
   email: EmailAdapter;
@@ -12,11 +15,24 @@ export interface Adapters {
 }
 
 export function createAdapters(): Adapters {
-  // In production, swap these for real adapters based on env vars
+  const resendApiKey = process.env['RESEND_API_KEY'];
+  const gcsBucketName = process.env['GCS_BUCKET_NAME'];
+  const gcsProjectId = process.env['GCS_PROJECT_ID'];
+  const fcmProjectId = process.env['FCM_PROJECT_ID'];
+  const googleCredentials = process.env['GOOGLE_APPLICATION_CREDENTIALS'];
+
   return {
-    email: new ConsoleEmailAdapter(),
-    storage: new LocalStorageAdapter(),
-    messaging: new ConsoleMessagingAdapter(),
+    email: resendApiKey ? new ResendEmailAdapter(resendApiKey) : new ConsoleEmailAdapter(),
+
+    storage:
+      gcsBucketName && gcsProjectId
+        ? new GcsStorageAdapter(gcsBucketName, gcsProjectId)
+        : new LocalStorageAdapter(),
+
+    messaging:
+      fcmProjectId && googleCredentials
+        ? new FcmMessagingAdapter(googleCredentials)
+        : new ConsoleMessagingAdapter(),
   };
 }
 

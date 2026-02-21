@@ -28,7 +28,7 @@ export function handleError(err: Error, c: Context): Response {
     }
     return c.json(
       errorResponse(err.code, err.message, requestId, err.details),
-      err.statusCode as 400 | 401 | 403 | 404 | 429 | 500
+      err.statusCode as 400 | 401 | 403 | 404 | 408 | 429 | 500
     );
   }
 

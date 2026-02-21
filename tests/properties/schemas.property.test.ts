@@ -7,7 +7,7 @@ import { PaginationSchema } from '../../src/schemas/common.schema.js';
 
 // Zod v4 email validation is stricter than fast-check's emailAddress() arbitrary.
 // Build a custom email generator that only produces Zod-valid emails.
-const zodEmail = fc.emailAddress().filter((e) => z.string().email().safeParse(e).success);
+const zodEmail = fc.emailAddress().filter((e) => z.email().safeParse(e).success);
 
 describe('Schema Property Tests', () => {
   it('UserCreateSchema should accept all valid inputs', () => {

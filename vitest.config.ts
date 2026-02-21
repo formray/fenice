@@ -10,15 +10,7 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'html', 'lcov'],
       include: ['src/**/*.ts'],
-      exclude: [
-        'src/server.ts',
-        'src/instrumentation.ts',
-        'src/services/**',
-        'src/models/**',
-        'src/adapters/email/resend.adapter.ts',
-        'src/adapters/storage/gcs.adapter.ts',
-        'src/adapters/messaging/fcm.adapter.ts',
-      ],
+      exclude: ['src/server.ts', 'src/instrumentation.ts', 'src/services/**', 'src/models/**'],
       thresholds: {
         lines: 60,
         branches: 40,

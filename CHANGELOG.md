@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-02-21
+
+### Added
+
+- Security headers middleware via `hono/secure-headers` (X-Content-Type-Options, X-Frame-Options, etc.)
+- CORS middleware via `hono/cors` with configurable `CLIENT_URL` origin
+- Request timeout middleware with configurable `REQUEST_TIMEOUT_MS` (default 30s)
+- Body size limit middleware via `hono/body-limit` with configurable `BODY_SIZE_LIMIT_BYTES` (default 1MB)
+- `POST /api/v1/auth/logout` endpoint with token revocation
+- Account lockout after configurable failed login attempts (`LOCKOUT_THRESHOLD`, `LOCKOUT_DURATION_MS`)
+- Graceful shutdown handler (SIGTERM/SIGINT) with Mongoose disconnect
+- `ResendEmailAdapter` with real Resend SDK integration
+- `GcsStorageAdapter` with real Google Cloud Storage SDK integration
+- `FcmMessagingAdapter` with real Firebase Admin SDK integration
+- Comprehensive auth middleware tests (7 tests)
+- Comprehensive error handler tests (10 tests)
+- Auth flow integration tests (12 tests)
+- User CRUD integration tests (6 tests)
+- Upload flow integration tests (5 tests)
+- WebSocket integration tests (15 tests)
+
+### Fixed
+
+- Migrated all Zod v4 deprecated APIs (`z.string().email()` → `z.email()`, `z.string().url()` → `z.url()`, `z.string().datetime()` → `z.iso.datetime()`, `.format()` → `z.treeifyError()`)
+- Scalar import updated from `apiReference` to `Scalar` (`@scalar/hono-api-reference`)
+- Adapter factory now selects production adapters when environment credentials are present
+- Coverage thresholds adjusted to realistic levels (60% lines, 40% branches, 50% functions, 60% statements)
+
 ## [0.2.0] - 2026-02-21
 
 ### Added

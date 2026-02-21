@@ -6,7 +6,7 @@ export const EnvSchema = z.object({
   PORT: z.coerce.number().default(3000),
 
   // Database
-  MONGODB_URI: z.string().url(),
+  MONGODB_URI: z.url(),
 
   // JWT
   JWT_SECRET: z.string().min(32),
@@ -30,7 +30,7 @@ export const EnvSchema = z.object({
   RATE_LIMIT_MAX_REQUESTS: z.coerce.number().default(100),
 
   // CORS
-  CLIENT_URL: z.string().url().optional(),
+  CLIENT_URL: z.url().optional(),
 
   // Upload
   UPLOAD_MAX_SIZE_BYTES: z.coerce.number().default(104_857_600),
@@ -42,6 +42,16 @@ export const EnvSchema = z.object({
   WS_HEARTBEAT_INTERVAL_MS: z.coerce.number().default(30_000),
   WS_HEARTBEAT_TIMEOUT_MS: z.coerce.number().default(10_000),
   WS_MESSAGE_RATE_LIMIT: z.coerce.number().default(60),
+
+  // Account Lockout
+  LOCKOUT_THRESHOLD: z.coerce.number().default(5),
+  LOCKOUT_DURATION_MS: z.coerce.number().default(900_000), // 15 minutes
+
+  // Request Timeout
+  REQUEST_TIMEOUT_MS: z.coerce.number().default(30_000),
+
+  // Body Size Limit
+  BODY_SIZE_LIMIT_BYTES: z.coerce.number().default(1_048_576), // 1MB
 });
 
 export type Env = z.infer<typeof EnvSchema>;
@@ -49,7 +59,7 @@ export type Env = z.infer<typeof EnvSchema>;
 export function loadEnv(): Env {
   const result = EnvSchema.safeParse(process.env);
   if (!result.success) {
-    const formatted = result.error.format();
+    const formatted = z.treeifyError(result.error);
     console.error('Invalid environment variables:', JSON.stringify(formatted, null, 2));
     process.exit(1);
   }

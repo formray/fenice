@@ -4,20 +4,20 @@ export const RoleEnum = z.enum(['superAdmin', 'admin', 'employee', 'client', 've
 
 export const UserSchema = z.object({
   id: z.string(),
-  email: z.string().email(),
+  email: z.email(),
   username: z.string().min(2).max(50),
   fullName: z.string().min(1).max(100),
   role: RoleEnum.default('user'),
   active: z.boolean().default(true),
   emailVerified: z.boolean().default(false),
-  pictureUrl: z.string().url().optional(),
-  lastLoginDate: z.string().datetime().optional(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
+  pictureUrl: z.url().optional(),
+  lastLoginDate: z.iso.datetime().optional(),
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
 });
 
 export const UserCreateSchema = z.object({
-  email: z.string().email(),
+  email: z.email(),
   username: z.string().min(2).max(50),
   fullName: z.string().min(1).max(100),
   password: z.string().min(8).max(128),
@@ -26,7 +26,7 @@ export const UserCreateSchema = z.object({
 export const UserUpdateSchema = z
   .object({
     fullName: z.string().min(1).max(100).optional(),
-    pictureUrl: z.string().url().optional(),
+    pictureUrl: z.url().optional(),
   })
   .strict();
 
@@ -34,8 +34,8 @@ export const UserQuerySchema = z.object({
   search: z.string().optional(),
   role: RoleEnum.optional(),
   active: z.coerce.boolean().optional(),
-  createdAfter: z.string().datetime().optional(),
-  createdBefore: z.string().datetime().optional(),
+  createdAfter: z.iso.datetime().optional(),
+  createdBefore: z.iso.datetime().optional(),
 });
 
 export type User = z.infer<typeof UserSchema>;

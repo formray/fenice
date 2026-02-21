@@ -1,6 +1,6 @@
 {
   "name": "fenice",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "AI-native, production-ready backend starter — Formray Engineering Guidelines compliant",
   "type": "module",
   "main": "dist/index.js",
@@ -39,6 +39,7 @@
     "url": "https://github.com/formray/fenice.git"
   },
   "dependencies": {
+    "@google-cloud/storage": "^7.19.0",
     "@hono/node-server": "^1.19.9",
     "@hono/node-ws": "^1.3.0",
     "@hono/zod-openapi": "^1.2.2",
@@ -51,12 +52,14 @@
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
+    "firebase-admin": "^13.6.1",
     "helmet": "^8.1.0",
     "hono": "^4.12.0",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.2.1",
     "pino": "^10.3.1",
     "pino-pretty": "^13.1.3",
+    "resend": "^6.9.2",
     "zod": "^4.3.6"
   },
   "lint-staged": {

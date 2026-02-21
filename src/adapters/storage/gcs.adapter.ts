@@ -1,30 +1,40 @@
+import { Storage } from '@google-cloud/storage';
 import type { StorageAdapter } from './types.js';
 
+const DEFAULT_SIGNED_URL_EXPIRY = 3600; // 1 hour
+
 export class GcsStorageAdapter implements StorageAdapter {
-  constructor(
-    private readonly bucketName: string,
-    private readonly projectId: string
-  ) {}
+  private readonly storage: Storage;
+  private readonly bucketName: string;
 
-  upload(_key: string, _data: Buffer, _contentType: string): Promise<string> {
-    // Google Cloud Storage integration placeholder
-    // npm install @google-cloud/storage when ready for production
-    return Promise.reject(
-      new Error(
-        `GCS adapter not yet implemented. Bucket: ${this.bucketName}, Project: ${this.projectId}`
-      )
-    );
+  constructor(bucketName: string, projectId: string) {
+    this.bucketName = bucketName;
+    this.storage = new Storage({ projectId });
   }
 
-  download(_key: string): Promise<Buffer> {
-    return Promise.reject(new Error('GCS adapter not yet implemented'));
+  async upload(key: string, data: Buffer, contentType: string): Promise<string> {
+    const file = this.storage.bucket(this.bucketName).file(key);
+    await file.save(data, { contentType, resumable: false });
+    return `gs://${this.bucketName}/${key}`;
   }
 
-  delete(_key: string): Promise<void> {
-    return Promise.reject(new Error('GCS adapter not yet implemented'));
+  async download(key: string): Promise<Buffer> {
+    const file = this.storage.bucket(this.bucketName).file(key);
+    const [contents] = await file.download();
+    return contents;
   }
 
-  getSignedUrl(_key: string, _expiresInSeconds?: number): Promise<string> {
-    return Promise.reject(new Error('GCS adapter not yet implemented'));
+  async delete(key: string): Promise<void> {
+    const file = this.storage.bucket(this.bucketName).file(key);
+    await file.delete();
+  }
+
+  async getSignedUrl(key: string, expiresInSeconds?: number): Promise<string> {
+    const file = this.storage.bucket(this.bucketName).file(key);
+    const [url] = await file.getSignedUrl({
+      action: 'read',
+      expires: Date.now() + (expiresInSeconds ?? DEFAULT_SIGNED_URL_EXPIRY) * 1000,
+    });
+    return url;
   }
 }

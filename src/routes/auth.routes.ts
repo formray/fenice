@@ -29,7 +29,9 @@ function getAuthService(): AuthService {
       env.JWT_ACCESS_EXPIRY,
       env.JWT_REFRESH_EXPIRY,
       adapters.email,
-      env.CLIENT_URL
+      env.CLIENT_URL,
+      env.LOCKOUT_THRESHOLD,
+      env.LOCKOUT_DURATION_MS
     );
   }
   return authService;
@@ -319,6 +321,32 @@ const resetPasswordRoute = createRoute({
   },
 });
 
+const logoutRoute = createRoute({
+  method: 'post',
+  path: '/auth/logout',
+  tags: ['Auth'],
+  summary: 'Logout and invalidate refresh token',
+  security: [{ Bearer: [] }],
+  responses: {
+    200: {
+      description: 'Logged out successfully',
+      content: {
+        'application/json': {
+          schema: SuccessResponseSchema,
+        },
+      },
+    },
+    401: {
+      description: 'Not authenticated',
+      content: {
+        'application/json': {
+          schema: ErrorResponseSchema,
+        },
+      },
+    },
+  },
+});
+
 type AuthEnv = {
   Variables: {
     userId: string;
@@ -387,4 +415,12 @@ authRouter.openapi(resetPasswordRoute, async (c) => {
   await service.resetPassword(token, newPassword);
 
   return c.json({ success: true as const, message: 'Password reset successful' }, 200);
+});
+
+authRouter.openapi(logoutRoute, async (c) => {
+  const userId = c.get('userId');
+  const service = getAuthService();
+  await service.logout(userId);
+
+  return c.json({ success: true as const, message: 'Logged out successfully' }, 200);
 });

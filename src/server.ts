@@ -28,6 +28,21 @@ async function start(): Promise<void> {
 
     injectWebSocket(server);
     logger.info('WebSocket support enabled');
+
+    // Graceful shutdown
+    const shutdown = async (signal: string): Promise<void> => {
+      logger.info({ signal }, 'Received shutdown signal, closing gracefully...');
+      try {
+        await mongoose.disconnect();
+        logger.info('MongoDB disconnected');
+      } catch (err) {
+        logger.error({ error: err }, 'Error during shutdown');
+      }
+      process.exit(0);
+    };
+
+    process.on('SIGTERM', () => void shutdown('SIGTERM'));
+    process.on('SIGINT', () => void shutdown('SIGINT'));
   } catch (error) {
     logger.error({ error }, 'Failed to start server');
     process.exit(1);

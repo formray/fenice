@@ -1,13 +1,21 @@
+import { Resend } from 'resend';
 import type { EmailAdapter } from './types.js';
 
-export class ResendEmailAdapter implements EmailAdapter {
-  constructor(private readonly _apiKey: string) {}
+const DEFAULT_FROM = 'FENICE <noreply@fenice.app>';
 
-  send(options: { to: string; subject: string; html: string; from?: string }): Promise<void> {
-    // Resend API integration placeholder
-    // npm install resend when ready for production
-    return Promise.reject(
-      new Error(`Resend adapter not yet implemented. Would send to: ${options.to}`)
-    );
+export class ResendEmailAdapter implements EmailAdapter {
+  private readonly client: Resend;
+
+  constructor(apiKey: string) {
+    this.client = new Resend(apiKey);
+  }
+
+  async send(options: { to: string; subject: string; html: string; from?: string }): Promise<void> {
+    await this.client.emails.send({
+      from: options.from ?? DEFAULT_FROM,
+      to: options.to,
+      subject: options.subject,
+      html: options.html,
+    });
   }
 }

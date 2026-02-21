@@ -19,6 +19,8 @@ FENICE is structured as a layered backend application with clear separation of c
                     +------------v-------------+
                     |     Global Middleware     |
                     |  requestId, requestLogger |
+                    |  secureHeaders, cors,     |
+                    |  timeout, bodyLimit       |
                     +------------+-------------+
                                  |
               +------------------v------------------+
@@ -122,7 +124,14 @@ External services are abstracted behind interfaces to achieve vendor independenc
 | Storage   | `StorageAdapter`   | `LocalStorageAdapter`    | `GCSAdapter`      |
 | Messaging | `MessagingAdapter` | `ConsoleMessagingAdapter`| `FCMAdapter`      |
 
-The `createAdapters()` factory in `src/adapters/index.ts` returns the appropriate set. In development, console/local implementations log operations without requiring external credentials.
+The `createAdapters()` factory in `src/adapters/index.ts` returns the appropriate set. The factory uses lazy initialization -- it calls `loadEnv()` inside the function body, never at module level, so importing the module has no side effects.
+
+Production adapter selection is based on which environment variables are present at call time:
+
+- **Email** -- `RESEND_API_KEY` present --> `ResendEmailAdapter` (uses Resend SDK)
+- **Storage** -- `GCS_BUCKET_NAME` + `GCS_PROJECT_ID` present --> `GcsStorageAdapter` (uses `@google-cloud/storage`)
+- **Messaging** -- `FCM_PROJECT_ID` + `GOOGLE_APPLICATION_CREDENTIALS` present --> `FcmMessagingAdapter` (uses `firebase-admin`)
+- **Otherwise** --> Console/local dev adapters (log operations without requiring external credentials)
 
 ### Why This Matters
 
@@ -205,12 +214,69 @@ Response format:
 }
 ```
 
+## Security Middleware Stack
+
+Every request passes through a layered middleware pipeline before reaching the route handler. The middleware is applied in this order in `src/index.ts`:
+
+```
+Request → requestId → requestLogger → secureHeaders → CORS → timeout → bodyLimit → apiVersion → errorHandler → rateLimiter → authMiddleware → Route Handler
+```
+
+### Middleware Details
+
+| Middleware        | Source                   | Purpose                                                                 |
+| ----------------- | ------------------------ | ----------------------------------------------------------------------- |
+| `requestId`       | Custom                   | Attaches a UUID v4 to every request for correlation                     |
+| `requestLogger`   | Custom (Pino)            | Logs method, path, status, and duration                                 |
+| `secureHeaders`   | `hono/secure-headers`    | Adds X-Content-Type-Options, X-Frame-Options, and other security headers|
+| `cors`            | `hono/cors`              | Reads `CLIENT_URL` from `process.env` directly (lazy-init, no `loadEnv()` at module level) |
+| `timeout`         | Custom                   | Uses `Promise.race` with `AbortController`; throws `AppError(408, 'REQUEST_TIMEOUT')` on timeout; default 30s via `REQUEST_TIMEOUT_MS` env var |
+| `bodyLimit`       | `hono/body-limit`        | Global 1MB limit via `BODY_SIZE_LIMIT_BYTES` env var; upload routes get a separate limit via `UPLOAD_MAX_SIZE_BYTES` |
+| `apiVersion`      | Custom                   | Injects API version prefix                                             |
+| `errorHandler`    | Custom                   | Catches all thrown errors and returns the standard error format          |
+| `rateLimiter`     | Custom                   | Auth routes: 10 req/min; general API: 100 req/min (defaults)           |
+| `authMiddleware`  | Custom (JWT)             | Verifies Bearer token, attaches user context                           |
+
+**Note:** `secureHeaders` comes from Hono's built-in `hono/secure-headers` module -- not the Express `helmet` package. Similarly, `cors` uses `hono/cors`, not a third-party CORS package.
+
+## Account Lockout
+
+To protect against brute-force attacks, FENICE implements account lockout on repeated failed login attempts:
+
+- After **5 consecutive failed login attempts** (configurable via `LOCKOUT_THRESHOLD`), the account is locked for **15 minutes** (configurable via `LOCKOUT_DURATION_MS`)
+- The User model tracks this with two fields:
+  - `failedLoginAttempts` -- incremented on each failed login
+  - `lockoutUntil` -- timestamp indicating when the lockout expires
+- A **successful login resets** the `failedLoginAttempts` counter to zero and clears `lockoutUntil`
+- Both fields are **excluded from `toJSON` transform** for security -- they never appear in API responses
+
+## Token Revocation
+
+FENICE supports explicit token revocation via a logout endpoint:
+
+- **`POST /api/v1/auth/logout`** -- requires authentication (auth middleware is applied to this route)
+- Sets `refreshToken = undefined` on the user document, invalidating any previously issued refresh token
+- After logout, any subsequent refresh token requests return **401 Unauthorized**
+- This provides a clean server-side logout mechanism rather than relying solely on token expiry
+
+## Graceful Shutdown
+
+The server process in `src/server.ts` registers handlers for `SIGTERM` and `SIGINT` signals:
+
+- On receiving either signal, the handler **disconnects Mongoose** (`mongoose.disconnect()`) before exiting the process
+- Shutdown events are **logged via Pino** so they appear in structured logs
+- This ensures database connections are properly closed during deployments, container restarts, or manual stops
+
 ## Testing Strategy
 
+Currently **222 tests across 40 files**.
+
 - **Unit tests** (`tests/unit/`) -- Test schemas, error classes, config validation, and adapters in isolation
-- **Integration tests** (`tests/integration/`) -- Test full HTTP request/response cycles via Hono's test client
+- **Integration tests** (`tests/integration/`) -- Test full HTTP request/response cycles using `app.request()` (Hono's test client -- no running server required)
 - **Property tests** (`tests/properties/`) -- Use fast-check to verify schema invariants with generated input
-- **Coverage thresholds** -- 80% minimum for lines, branches, functions, and statements
+- **WebSocket tests** -- Pure in-memory tests using `WsManager` + `handleMessage` (no real WebSocket connections)
+- **Upload tests** -- Use real `UploadService` with `LocalStorageAdapter` and a temp directory
+- **Coverage thresholds** -- lines: 60%, branches: 40%, functions: 50%, statements: 60%
 - **Lazy initialization** -- Services and middleware use lazy-init patterns to avoid calling `loadEnv()` at import time, which would break test environments
 
 ## Database Design

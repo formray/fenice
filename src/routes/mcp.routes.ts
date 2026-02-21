@@ -6,7 +6,7 @@ const mcpRouter = new Hono();
 mcpRouter.get('/mcp', async (c) => {
   return c.json({
     name: 'fenice',
-    version: '0.2.0',
+    version: '0.3.0',
     description: 'AI-native backend API — FENICE',
     capabilities: {
       tools: true,

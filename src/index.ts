@@ -1,6 +1,9 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { createNodeWebSocket } from '@hono/node-ws';
-import { apiReference } from '@scalar/hono-api-reference';
+import { Scalar } from '@scalar/hono-api-reference';
+import { bodyLimit } from 'hono/body-limit';
+import { cors } from 'hono/cors';
+import { secureHeaders } from 'hono/secure-headers';
 import { healthRouter } from './routes/health.routes.js';
 import { authRouter } from './routes/auth.routes.js';
 import { userRouter } from './routes/user.routes.js';
@@ -12,6 +15,7 @@ import { requestLogger } from './middleware/requestLogger.js';
 import { authMiddleware } from './middleware/auth.js';
 import { handleError } from './middleware/errorHandler.js';
 import { rateLimiter } from './middleware/rate-limiter.js';
+import { timeout } from './middleware/timeout.js';
 import { apiVersion } from './middleware/api-version.js';
 import { generateLlmDocs } from './utils/llm-docs.js';
 
@@ -27,6 +31,32 @@ export function injectWebSocket(...args: Parameters<typeof nodeWs.injectWebSocke
 // Global middleware
 app.use('*', requestId);
 app.use('*', requestLogger);
+app.use('*', secureHeaders());
+
+// CORS — read CLIENT_URL directly to avoid calling loadEnv() at module level (breaks tests)
+app.use('*', cors({ origin: process.env['CLIENT_URL'] ?? '*' }));
+
+// Request timeout — read directly from env to avoid loadEnv() at module level
+app.use('*', timeout(Number(process.env['REQUEST_TIMEOUT_MS']) || 30_000));
+
+// Body size limit — global 1MB default
+app.use(
+  '*',
+  bodyLimit({
+    maxSize: Number(process.env['BODY_SIZE_LIMIT_BYTES']) || 1_048_576,
+    onError: (c) =>
+      c.json(
+        {
+          error: {
+            code: 'BODY_TOO_LARGE',
+            message: 'Request body exceeds maximum allowed size',
+            requestId: (c.get('requestId') as string | undefined) ?? 'unknown',
+          },
+        },
+        413
+      ),
+  })
+);
 
 // API versioning
 app.use('/api/*', apiVersion);
@@ -40,6 +70,7 @@ app.use('/api/v1/*', rateLimiter());
 
 // Auth middleware — applied to protected routes only
 app.use('/api/v1/users/*', authMiddleware);
+app.use('/api/v1/auth/logout', authMiddleware);
 app.use('/api/v1/upload/*', authMiddleware);
 app.use('/api/v1/upload/*', rateLimiter({ windowMs: 60_000, max: 5 }));
 
@@ -63,7 +94,7 @@ app.doc('/openapi', {
   openapi: '3.1.0',
   info: {
     title: 'FENICE API',
-    version: '0.2.0',
+    version: '0.3.0',
     description:
       'AI-native, production-ready backend API — Formray Engineering Guidelines compliant',
   },
@@ -73,7 +104,7 @@ app.doc('/openapi', {
 // --- Scalar interactive docs ---
 app.get(
   '/docs',
-  apiReference({
+  Scalar({
     theme: 'kepler',
     url: '/openapi',
   })
@@ -85,7 +116,7 @@ app.get('/docs/llm', (c) => {
     openapi: '3.1.0',
     info: {
       title: 'FENICE API',
-      version: '0.2.0',
+      version: '0.3.0',
       description:
         'AI-native, production-ready backend API — Formray Engineering Guidelines compliant',
     },
