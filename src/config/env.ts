@@ -31,6 +31,12 @@ export const EnvSchema = z.object({
 
   // CORS
   CLIENT_URL: z.string().url().optional(),
+
+  // Upload
+  UPLOAD_MAX_SIZE_BYTES: z.coerce.number().default(104_857_600),
+  UPLOAD_CHUNK_SIZE_BYTES: z.coerce.number().default(5_242_880),
+  UPLOAD_SESSION_TIMEOUT_MS: z.coerce.number().default(3_600_000),
+  UPLOAD_MAX_CONCURRENT: z.coerce.number().default(3),
 });
 
 export type Env = z.infer<typeof EnvSchema>;
