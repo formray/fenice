@@ -4,6 +4,7 @@ import { healthRouter } from './routes/health.routes.js';
 import { authRouter } from './routes/auth.routes.js';
 import { userRouter } from './routes/user.routes.js';
 import { mcpRouter } from './routes/mcp.routes.js';
+import { uploadRouter } from './routes/upload.routes.js';
 import { requestId } from './middleware/requestId.js';
 import { requestLogger } from './middleware/requestLogger.js';
 import { authMiddleware } from './middleware/auth.js';
@@ -30,12 +31,15 @@ app.use('/api/v1/*', rateLimiter());
 
 // Auth middleware — applied to protected routes only
 app.use('/api/v1/users/*', authMiddleware);
+app.use('/api/v1/upload/*', authMiddleware);
+app.use('/api/v1/upload/*', rateLimiter({ windowMs: 60_000, max: 5 }));
 
 // Mount API routes
 app.route('/api/v1', healthRouter);
 app.route('/api/v1', authRouter);
 app.route('/api/v1', userRouter);
 app.route('/api/v1', mcpRouter);
+app.route('/api/v1', uploadRouter);
 
 // --- Security scheme ---
 app.openAPIRegistry.registerComponent('securitySchemes', 'Bearer', {
