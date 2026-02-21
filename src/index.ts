@@ -8,6 +8,7 @@ import { requestId } from './middleware/requestId.js';
 import { requestLogger } from './middleware/requestLogger.js';
 import { authMiddleware } from './middleware/auth.js';
 import { handleError } from './middleware/errorHandler.js';
+import { rateLimiter } from './middleware/rate-limiter.js';
 import { generateLlmDocs } from './utils/llm-docs.js';
 
 export const app = new OpenAPIHono();
@@ -18,6 +19,10 @@ app.use('*', requestLogger);
 
 // Error handler
 app.onError(handleError);
+
+// Rate limiting — auth routes have stricter limits
+app.use('/api/v1/auth/*', rateLimiter({ windowMs: 60_000, max: 10 }));
+app.use('/api/v1/*', rateLimiter());
 
 // Auth middleware — applied to protected routes only
 app.use('/api/v1/users/*', authMiddleware);
@@ -48,10 +53,13 @@ app.doc('/openapi', {
 });
 
 // --- Scalar interactive docs ---
-app.get('/docs', apiReference({
-  theme: 'kepler',
-  url: '/openapi',
-}));
+app.get(
+  '/docs',
+  apiReference({
+    theme: 'kepler',
+    url: '/openapi',
+  })
+);
 
 // --- LLM-readable markdown docs ---
 app.get('/docs/llm', (c) => {

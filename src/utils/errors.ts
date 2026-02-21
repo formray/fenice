@@ -3,7 +3,7 @@ export class AppError extends Error {
     public readonly statusCode: number,
     public readonly code: string,
     message: string,
-    public readonly details?: { field?: string; message: string }[]
+    public readonly details?: { field?: string | undefined; message: string }[]
   ) {
     super(message);
     this.name = 'AppError';
@@ -29,7 +29,7 @@ export class ForbiddenError extends AppError {
 }
 
 export class ValidationError extends AppError {
-  constructor(details: { field?: string; message: string }[]) {
+  constructor(details: { field?: string | undefined; message: string }[]) {
     super(400, 'VALIDATION_ERROR', 'Validation failed', details);
   }
 }

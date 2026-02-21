@@ -7,7 +7,7 @@ export function errorResponse(
   code: string,
   message: string,
   requestId: string,
-  details?: { field?: string; message: string }[]
+  details?: { field?: string | undefined; message: string }[]
 ): ErrorResponse {
   return {
     error: {

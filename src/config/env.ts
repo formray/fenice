@@ -25,6 +25,10 @@ export const EnvSchema = z.object({
   GOOGLE_APPLICATION_CREDENTIALS: z.string().optional(),
   FCM_PROJECT_ID: z.string().optional(),
 
+  // Rate Limiting
+  RATE_LIMIT_WINDOW_MS: z.coerce.number().default(60_000),
+  RATE_LIMIT_MAX_REQUESTS: z.coerce.number().default(100),
+
   // CORS
   CLIENT_URL: z.string().url().optional(),
 });
