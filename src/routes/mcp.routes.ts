@@ -6,7 +6,7 @@ const mcpRouter = new Hono();
 mcpRouter.get('/mcp', async (c) => {
   return c.json({
     name: 'fenice',
-    version: '0.1.0',
+    version: '0.2.0',
     description: 'AI-native backend API — FENICE',
     capabilities: {
       tools: true,
@@ -90,6 +90,126 @@ mcpRouter.get('/mcp', async (c) => {
           required: ['id'],
         },
       },
+      {
+        name: 'user_list',
+        description: 'List users with cursor pagination and optional filters',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            cursor: { type: 'string', description: 'Pagination cursor from previous response' },
+            limit: { type: 'number', minimum: 1, maximum: 100, default: 20 },
+            sort: {
+              type: 'string',
+              enum: ['createdAt', 'email', 'username'],
+              default: 'createdAt',
+            },
+            order: { type: 'string', enum: ['asc', 'desc'], default: 'desc' },
+            search: { type: 'string', description: 'Search across email, username, fullName' },
+            role: {
+              type: 'string',
+              enum: ['superAdmin', 'admin', 'employee', 'client', 'vendor', 'user'],
+            },
+            active: { type: 'boolean' },
+          },
+        },
+      },
+      {
+        name: 'auth_verify_email',
+        description: 'Verify email address using token from verification email',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            token: { type: 'string' },
+          },
+          required: ['token'],
+        },
+      },
+      {
+        name: 'auth_resend_verification',
+        description: 'Resend email verification link (requires auth)',
+        inputSchema: { type: 'object', properties: {} },
+      },
+      {
+        name: 'auth_request_password_reset',
+        description: 'Request a password reset email',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            email: { type: 'string', format: 'email' },
+          },
+          required: ['email'],
+        },
+      },
+      {
+        name: 'auth_reset_password',
+        description: 'Reset password using token from reset email',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            token: { type: 'string' },
+            newPassword: { type: 'string', minLength: 8, maxLength: 128 },
+          },
+          required: ['token', 'newPassword'],
+        },
+      },
+      {
+        name: 'upload_init',
+        description: 'Initialize a chunked file upload session (requires auth)',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            filename: { type: 'string' },
+            contentType: { type: 'string' },
+            totalSize: { type: 'number', description: 'File size in bytes (max 100MB)' },
+          },
+          required: ['filename', 'contentType', 'totalSize'],
+        },
+      },
+      {
+        name: 'upload_chunk',
+        description: 'Upload a single chunk of a file (requires auth)',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            uploadId: { type: 'string' },
+            index: { type: 'number', description: 'Zero-based chunk index' },
+          },
+          required: ['uploadId', 'index'],
+        },
+      },
+      {
+        name: 'upload_complete',
+        description: 'Complete a chunked upload and assemble the file (requires auth)',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            uploadId: { type: 'string' },
+          },
+          required: ['uploadId'],
+        },
+      },
+      {
+        name: 'upload_cancel',
+        description: 'Cancel an upload and clean up chunks (requires auth)',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            uploadId: { type: 'string' },
+          },
+          required: ['uploadId'],
+        },
+      },
+      {
+        name: 'ws_connect',
+        description: 'Connect to WebSocket endpoint for real-time messaging',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            token: { type: 'string', description: 'JWT access token for authentication' },
+          },
+          required: ['token'],
+        },
+      },
     ],
     resources: [
       {
@@ -106,7 +226,7 @@ mcpRouter.get('/mcp', async (c) => {
       },
     ],
     instructions:
-      'FENICE is an AI-native REST API. Use the tools above to interact with authentication and user management. All tool calls map to REST endpoints. Authentication required for user operations — obtain tokens via auth_login first.',
+      'FENICE is an AI-native REST API. Use the tools above to interact with authentication, user management, file uploads, and real-time WebSocket messaging. All tool calls map to REST endpoints. Authentication required for most operations — obtain tokens via auth_login first. WebSocket connections require a valid JWT token.',
   });
 });
 

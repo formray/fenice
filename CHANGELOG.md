@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-02-21
+
+### Added
+
+- Role-based access control (RBAC) middleware with 6-level hierarchy
+- Rate limiting middleware with abstract store pattern and in-memory implementation
+- Cursor-based pagination utility with Base64-encoded cursors
+- Query builder for user search/filter (email, username, fullName, role, active, date range)
+- User list endpoint with pagination, search, and filtering
+- API versioning middleware (extracts version from URL path)
+- Email verification flow (signup token, verify, resend)
+- Password reset flow (request, reset with token)
+- Chunked file upload system (init, chunk upload, complete, cancel)
+- WebSocket real-time messaging with JWT authentication
+- WebSocket room management (join, leave, broadcast)
+- WebSocket message handlers (chat, notifications, ping/pong)
+- MCP endpoint updated with v0.2.0 tools
+- Zod request validation middleware
+- Crypto utility (token generation + SHA-256 hashing)
+- New error classes: RateLimitError (429), UploadError (400)
+- Upload environment configuration variables
+- WebSocket environment configuration variables
+
 ## [0.1.0] - 2026-02-21
 
 ### Added

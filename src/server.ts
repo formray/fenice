@@ -1,7 +1,7 @@
 import { serve } from '@hono/node-server';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
-import { app } from './index.js';
+import { app, injectWebSocket } from './index.js';
 import { loadEnv } from './config/env.js';
 import { createLogger } from './utils/logger.js';
 
@@ -15,7 +15,7 @@ async function start(): Promise<void> {
     await mongoose.connect(env.MONGODB_URI);
     logger.info('Connected to MongoDB');
 
-    serve(
+    const server = serve(
       {
         fetch: app.fetch,
         port: env.PORT,
@@ -25,6 +25,9 @@ async function start(): Promise<void> {
         logger.info(`FENICE is running on http://${env.HOST}:${info.port}`);
       }
     );
+
+    injectWebSocket(server);
+    logger.info('WebSocket support enabled');
   } catch (error) {
     logger.error({ error }, 'Failed to start server');
     process.exit(1);

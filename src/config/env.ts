@@ -25,8 +25,23 @@ export const EnvSchema = z.object({
   GOOGLE_APPLICATION_CREDENTIALS: z.string().optional(),
   FCM_PROJECT_ID: z.string().optional(),
 
+  // Rate Limiting
+  RATE_LIMIT_WINDOW_MS: z.coerce.number().default(60_000),
+  RATE_LIMIT_MAX_REQUESTS: z.coerce.number().default(100),
+
   // CORS
   CLIENT_URL: z.string().url().optional(),
+
+  // Upload
+  UPLOAD_MAX_SIZE_BYTES: z.coerce.number().default(104_857_600),
+  UPLOAD_CHUNK_SIZE_BYTES: z.coerce.number().default(5_242_880),
+  UPLOAD_SESSION_TIMEOUT_MS: z.coerce.number().default(3_600_000),
+  UPLOAD_MAX_CONCURRENT: z.coerce.number().default(3),
+
+  // WebSocket
+  WS_HEARTBEAT_INTERVAL_MS: z.coerce.number().default(30_000),
+  WS_HEARTBEAT_TIMEOUT_MS: z.coerce.number().default(10_000),
+  WS_MESSAGE_RATE_LIMIT: z.coerce.number().default(60),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

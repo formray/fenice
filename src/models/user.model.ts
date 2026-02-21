@@ -8,6 +8,9 @@ export interface UserDocument extends Omit<User, 'id'>, Document {
   refreshToken?: string | undefined;
   resetPasswordToken?: string | undefined;
   resetPasswordExpires?: Date | undefined;
+  emailVerified: boolean;
+  emailVerificationToken?: string | undefined;
+  emailVerificationExpires?: Date | undefined;
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
@@ -54,6 +57,15 @@ const userSchema = new Schema<UserDocument>(
     refreshToken: String,
     resetPasswordToken: String,
     resetPasswordExpires: Date,
+    emailVerified: {
+      type: Boolean,
+      default: false,
+    },
+    emailVerificationToken: {
+      type: String,
+      select: false,
+    },
+    emailVerificationExpires: Date,
   },
   {
     timestamps: true,
@@ -66,6 +78,8 @@ const userSchema = new Schema<UserDocument>(
         delete ret['refreshToken'];
         delete ret['resetPasswordToken'];
         delete ret['resetPasswordExpires'];
+        delete ret['emailVerificationToken'];
+        delete ret['emailVerificationExpires'];
         return ret;
       },
     },

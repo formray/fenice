@@ -31,6 +31,7 @@ Thumbs.db
 
 # Claude worktrees
 .claude/
+.worktrees/
 
 # Docker
 .docker/
