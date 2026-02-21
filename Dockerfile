@@ -1,20 +1,40 @@
-FROM node:18-alpine as base
+# ============================================
+# FENICE — Multi-stage Docker Build
+# ============================================
 
-WORKDIR /usr/src/app
+# Stage 1: Build
+FROM node:22-alpine AS builder
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci
+
+COPY tsconfig.json ./
+COPY src/ ./src/
+
+RUN npm run build
+
+# Stage 2: Production
+FROM node:22-alpine AS production
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+COPY package*.json ./
+RUN npm ci --omit=dev && npm cache clean --force
+
+COPY --from=builder /app/dist ./dist
+
+# Non-root user
+RUN addgroup -g 1001 -S fenice && \
+    adduser -S fenice -u 1001 -G fenice
+USER fenice
+
 EXPOSE 3000
 
-FROM base as builder
-COPY ["package.json", "package-lock.json*", "./"]
-COPY ./tsconfig.json ./tsconfig.json
-COPY ./src ./src
-RUN npm ci --only-production
-RUN npm run compile
-RUN npm prune --production
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/v1/health || exit 1
 
-FROM base as release
-ENV NODE_ENV=production
-USER node
-COPY --chown=node:node --from=builder /usr/src/app/node_modules ./node_modules
-COPY --chown=node:node --from=builder /usr/src/app/build ./build
-COPY --chown=node:node . /usr/src/app
-CMD ["node", "./build/src/bin/server"]
+CMD ["node", "dist/server.js"]
