@@ -1,6 +1,7 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { createNodeWebSocket } from '@hono/node-ws';
 import { Scalar } from '@scalar/hono-api-reference';
+import { bodyLimit } from 'hono/body-limit';
 import { cors } from 'hono/cors';
 import { secureHeaders } from 'hono/secure-headers';
 import { healthRouter } from './routes/health.routes.js';
@@ -37,6 +38,25 @@ app.use('*', cors({ origin: process.env['CLIENT_URL'] ?? '*' }));
 
 // Request timeout — read directly from env to avoid loadEnv() at module level
 app.use('*', timeout(Number(process.env['REQUEST_TIMEOUT_MS']) || 30_000));
+
+// Body size limit — global 1MB default
+app.use(
+  '*',
+  bodyLimit({
+    maxSize: Number(process.env['BODY_SIZE_LIMIT_BYTES']) || 1_048_576,
+    onError: (c) =>
+      c.json(
+        {
+          error: {
+            code: 'BODY_TOO_LARGE',
+            message: 'Request body exceeds maximum allowed size',
+            requestId: (c.get('requestId') as string | undefined) ?? 'unknown',
+          },
+        },
+        413
+      ),
+  })
+);
 
 // API versioning
 app.use('/api/*', apiVersion);

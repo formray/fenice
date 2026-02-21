@@ -49,6 +49,9 @@ export const EnvSchema = z.object({
 
   // Request Timeout
   REQUEST_TIMEOUT_MS: z.coerce.number().default(30_000),
+
+  // Body Size Limit
+  BODY_SIZE_LIMIT_BYTES: z.coerce.number().default(1_048_576), // 1MB
 });
 
 export type Env = z.infer<typeof EnvSchema>;
