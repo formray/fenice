@@ -1,10 +1,15 @@
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { UserService } from '../services/user.service.js';
-import { UserSchema, UserUpdateSchema } from '../schemas/user.schema.js';
-import { ErrorResponseSchema, SuccessResponseSchema } from '../schemas/common.schema.js';
+import { UserSchema, UserUpdateSchema, UserQuerySchema } from '../schemas/user.schema.js';
+import {
+  CursorPaginationSchema,
+  ErrorResponseSchema,
+  SuccessResponseSchema,
+} from '../schemas/common.schema.js';
 import type { User } from '../schemas/user.schema.js';
 import type { UserDocument } from '../models/user.model.js';
 import { requireRole } from '../middleware/rbac.js';
+import { buildUserFilter } from '../utils/query-builder.js';
 
 // Env type for routes that expect auth context
 type AuthEnv = {
@@ -33,6 +38,41 @@ function serializeUser(user: UserDocument): User {
 }
 
 // --- Route definitions ---
+
+const listUsersRoute = createRoute({
+  method: 'get',
+  path: '/users',
+  tags: ['Users'],
+  summary: 'List users with pagination and filtering',
+  security: [{ Bearer: [] }],
+  request: {
+    query: CursorPaginationSchema.merge(UserQuerySchema),
+  },
+  responses: {
+    200: {
+      description: 'Paginated user list',
+      content: {
+        'application/json': {
+          schema: z.object({
+            data: z.array(UserSchema),
+            pagination: z.object({
+              hasNext: z.boolean(),
+              nextCursor: z.string().nullable(),
+            }),
+          }),
+        },
+      },
+    },
+    401: {
+      description: 'Not authenticated',
+      content: {
+        'application/json': {
+          schema: ErrorResponseSchema,
+        },
+      },
+    },
+  },
+});
 
 const getMeRoute = createRoute({
   method: 'get',
@@ -209,6 +249,19 @@ export const userRouter = new OpenAPIHono<AuthEnv>();
 
 // RBAC: admin-only for delete operations
 userRouter.delete('/users/:id', requireRole('admin'));
+
+userRouter.openapi(listUsersRoute, async (c) => {
+  const { cursor, limit, sort, order, ...filterParams } = c.req.valid('query');
+  const filter = buildUserFilter(filterParams);
+  const result = await userService.findAll(filter, { cursor, limit, sort, order });
+  return c.json(
+    {
+      data: result.data.map(serializeUser),
+      pagination: result.pagination,
+    },
+    200
+  );
+});
 
 userRouter.openapi(getMeRoute, async (c) => {
   const userId = c.get('userId');

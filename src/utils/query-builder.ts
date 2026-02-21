@@ -1,14 +1,12 @@
-import type { FilterQuery } from 'mongoose';
-
 interface UserFilterParams {
-  search?: string;
-  role?: string;
-  active?: boolean;
-  createdAfter?: string;
-  createdBefore?: string;
+  search?: string | undefined;
+  role?: string | undefined;
+  active?: boolean | undefined;
+  createdAfter?: string | undefined;
+  createdBefore?: string | undefined;
 }
 
-export function buildUserFilter(params: UserFilterParams): FilterQuery<unknown> {
+export function buildUserFilter(params: UserFilterParams): Record<string, unknown> {
   const filter: Record<string, unknown> = {};
 
   if (params.search) {
@@ -39,5 +37,5 @@ export function buildUserFilter(params: UserFilterParams): FilterQuery<unknown> 
     filter['createdAt'] = dateFilter;
   }
 
-  return filter as FilterQuery<unknown>;
+  return filter;
 }
