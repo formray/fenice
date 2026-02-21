@@ -46,6 +46,9 @@ export const EnvSchema = z.object({
   // Account Lockout
   LOCKOUT_THRESHOLD: z.coerce.number().default(5),
   LOCKOUT_DURATION_MS: z.coerce.number().default(900_000), // 15 minutes
+
+  // Request Timeout
+  REQUEST_TIMEOUT_MS: z.coerce.number().default(30_000),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

@@ -14,6 +14,7 @@ import { requestLogger } from './middleware/requestLogger.js';
 import { authMiddleware } from './middleware/auth.js';
 import { handleError } from './middleware/errorHandler.js';
 import { rateLimiter } from './middleware/rate-limiter.js';
+import { timeout } from './middleware/timeout.js';
 import { apiVersion } from './middleware/api-version.js';
 import { generateLlmDocs } from './utils/llm-docs.js';
 
@@ -33,6 +34,9 @@ app.use('*', secureHeaders());
 
 // CORS — read CLIENT_URL directly to avoid calling loadEnv() at module level (breaks tests)
 app.use('*', cors({ origin: process.env['CLIENT_URL'] ?? '*' }));
+
+// Request timeout — read directly from env to avoid loadEnv() at module level
+app.use('*', timeout(Number(process.env['REQUEST_TIMEOUT_MS']) || 30_000));
 
 // API versioning
 app.use('/api/*', apiVersion);
