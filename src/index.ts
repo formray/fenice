@@ -1,6 +1,7 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { createNodeWebSocket } from '@hono/node-ws';
 import { Scalar } from '@scalar/hono-api-reference';
+import { secureHeaders } from 'hono/secure-headers';
 import { healthRouter } from './routes/health.routes.js';
 import { authRouter } from './routes/auth.routes.js';
 import { userRouter } from './routes/user.routes.js';
@@ -27,6 +28,7 @@ export function injectWebSocket(...args: Parameters<typeof nodeWs.injectWebSocke
 // Global middleware
 app.use('*', requestId);
 app.use('*', requestLogger);
+app.use('*', secureHeaders());
 
 // API versioning
 app.use('/api/*', apiVersion);
