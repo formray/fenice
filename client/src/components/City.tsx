@@ -13,10 +13,10 @@ export function City(): React.JSX.Element | null {
 
   const layout = useMemo(() => computeCityLayout(services, endpoints), [services, endpoints]);
 
-  if (loading || endpoints.length === 0) return null;
-
-  // Build a lookup map for endpoints
+  // Build a lookup map for endpoints — must be above early return (hooks rule)
   const endpointMap = useMemo(() => new Map(endpoints.map((e) => [e.id, e])), [endpoints]);
+
+  if (loading || endpoints.length === 0) return null;
 
   return (
     <group>
