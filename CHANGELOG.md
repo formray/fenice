@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- World model Zod schemas (WorldService, WorldEndpoint, WorldEdge, WorldModel) with schema version 1
+- ProjectionService for OpenAPI 3.x to WorldModel transformation (tag grouping, pairwise edges, auth detection)
+- World WS protocol schemas (subscribe, snapshot, delta, ping/pong, error) with discriminated unions
+- WorldWsManager with monotonic seq numbering, ring buffer (configurable size), Base64 resume tokens with TTL
+- World WS message handlers for subscribe flow (full snapshot and resume with catch-up) and ping/pong keepalive
+- World Gateway WebSocket endpoint at `GET /api/v1/world-ws` with JWT query-param authentication
+- Environment variables: `WORLD_WS_BUFFER_SIZE` (default 1000), `WORLD_WS_RESUME_TTL_MS` (default 5min)
+- Integration tests for ProjectionService (live OpenAPI parsing) and World WS (subscribe, snapshot, resume flows)
+- Unit tests for world schemas, projection service, world WS manager, and world handlers (97 new tests)
+- React + R3F client scaffold (`client/`) with Vite 6, React 19, Three.js 0.173, Zustand 5
+- Client-side WorldModel types mirroring backend Zod schemas (plain TypeScript interfaces)
+- WebSocket connection hook with auto-reconnect (3s), ping/pong (25s), and resume token support
+- Zustand stores for world state and building selection
+- Deterministic grid layout service (services → districts, endpoints → buildings)
+- 3D city renderer: buildings colored by HTTP method, hover glow, click selection
+- District ground planes with service tag labels and edge connectors
+- HUD overlay with connection status indicator and HTTP method color legend
+- Side panel with endpoint details (path, method, summary, auth, params, related endpoints)
+- Client CI job (lint, typecheck, test, build) in GitHub Actions
+- Client unit tests for layout service, Zustand store, and color mappings (24 new tests)
+
 ## [0.3.0] - 2026-02-21
 
 ### Added

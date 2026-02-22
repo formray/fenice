@@ -20,10 +20,15 @@ if [ "$NODE_VERSION" -lt 22 ]; then
 fi
 success "Node.js $(node -v)"
 
-# Install dependencies
-info "Installing dependencies..."
+# Install backend dependencies
+info "Installing backend dependencies..."
 npm ci
-success "Dependencies installed"
+success "Backend dependencies installed"
+
+# Install client dependencies
+info "Installing client dependencies..."
+(cd "$SCRIPT_DIR/client" && npm ci)
+success "Client dependencies installed"
 
 # Copy .env if not exists
 if [ ! -f .env ]; then
@@ -35,4 +40,4 @@ else
 fi
 
 echo -e "\n${GREEN}✓ Setup complete!${NC}"
-echo -e "  Run ${BLUE}./dev.sh${NC} to start development"
+echo -e "  Run ${BLUE}./dev.sh${NC} to start backend + client"

@@ -19,8 +19,12 @@ docker compose down -v 2>/dev/null || true
 
 info "Cleaning build artifacts..."
 rm -rf node_modules/ dist/ coverage/ .eslintcache
+rm -rf client/node_modules/ client/dist/
 
-info "Reinstalling dependencies..."
+info "Reinstalling backend dependencies..."
 npm ci
+
+info "Reinstalling client dependencies..."
+(cd "$SCRIPT_DIR/client" && npm ci)
 
 success "Reset complete! Run ./dev.sh to start fresh"

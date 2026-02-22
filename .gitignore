@@ -39,6 +39,9 @@ Thumbs.db
 # Docker
 .docker/
 
+# Client build output
+client/dist/
+
 # Misc
 *.tgz
 .npm
