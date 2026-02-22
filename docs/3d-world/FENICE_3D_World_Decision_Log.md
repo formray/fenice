@@ -39,6 +39,11 @@
    - Impatto: M2C puo' partire solo dopo approvazione semantic contract M2B.
    - Owner: Giuseppe
 
+4. Decisione: pubblicare draft operativo M2B semantic contract + acceptance matrix.
+   - Razionale: sbloccare implementazione Claude con regole deterministiche condivise.
+   - Impatto: task W2-T04/W2-T05/W2-T09 passano in IN_PROGRESS in attesa approvazione prodotto.
+   - Owner: Shared
+
 ## Template nuova decisione
 ```md
 ## YYYY-MM-DD

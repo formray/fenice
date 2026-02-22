@@ -26,6 +26,10 @@ Ship M2A technical reliability, lock M2B semantic behavior, and prepare M2C styl
 3. W2-T09 support: semantic e2e scenarios and acceptance checklist.
 4. Keep planning docs, decision log, and backlog aligned with real status.
 
+Current draft outputs:
+1. `FENICE_3D_World_M2B_SemanticContract_v1.md`
+2. `FENICE_3D_World_M2B_Acceptance_Matrix.md`
+
 ### Giuseppe (product decisions + final approvals)
 1. Approve semantic rules for anon/authenticated/degraded flows.
 2. Approve zoning model (public outside perimeter, protected behind auth gate).

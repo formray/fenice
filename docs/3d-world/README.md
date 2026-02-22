@@ -16,12 +16,16 @@ Stato: M1 completato (2026-02-22), M2 in avvio con sequenza M2A -> M2B -> M2C.
 3. `FENICE_3D_World_M2_RealtimeOverlay_Plan.md`
 4. `FENICE_3D_World_PlanningBoard_v0.1.md`
 5. `FENICE_3D_World_Handoff_Brief_M2_Week2.md`
+6. `FENICE_3D_World_M2B_SemanticContract_v1.md`
+7. `FENICE_3D_World_M2B_Acceptance_Matrix.md`
 
 ## Core design
 1. `FENICE_3D_World_Approccio_Tecnico_v0.2.md`
 2. `FENICE_3D_World_WorldEvents_v1.md`
 3. `FENICE_3D_World_M1_StaticCity_Checklist.md`
 4. `FENICE_3D_World_DemoNarrative_5min.md`
+5. `FENICE_3D_World_M2B_SemanticContract_v1.md`
+6. `FENICE_3D_World_M2B_Acceptance_Matrix.md`
 
 ## Architecture decisions
 1. `adr/ADR-001-Event-Model.md`
