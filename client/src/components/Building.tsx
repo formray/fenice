@@ -29,8 +29,9 @@ export function Building({ layout, endpoint }: BuildingProps): React.JSX.Element
   const emissiveColor = hovered ? methodColor : linkStyle.hex;
   const emissiveIntensity = hovered ? 0.4 : linkStyle.emissiveIntensity;
   const semanticOpacity = isSelected || hovered ? 1.0 : linkStyle.opacity;
-  // Keep buildings mostly solid for city readability while preserving blocked dimming.
-  const opacity = Math.max(semanticOpacity, semantics?.linkState === 'blocked' ? 0.78 : 0.88);
+  // Keep buildings nearly opaque for readability while preserving blocked-state dimming.
+  const minimumOpacity = semantics?.linkState === 'blocked' ? 0.9 : 0.96;
+  const opacity = Math.max(semanticOpacity, minimumOpacity);
 
   const handleClick = (e: ThreeEvent<MouseEvent>): void => {
     e.stopPropagation();
