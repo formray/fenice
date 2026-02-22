@@ -88,6 +88,35 @@ function computeRingRadius(
   return Math.max(minRadius, computed);
 }
 
+function generateBoulevards(
+  innerRadius: number,
+  outerRadius: number,
+  innerCount: number,
+  outerCount: number
+): RoadSegment[] {
+  const boulevards: RoadSegment[] = [];
+  const maxRadius = outerCount > 0 ? outerRadius : innerRadius;
+  const totalDistricts = innerCount + outerCount;
+  if (totalDistricts === 0) return boulevards;
+
+  const spokeCount = Math.max(3, Math.ceil(totalDistricts / 3));
+
+  for (let i = 0; i < spokeCount; i++) {
+    const angle = (i / spokeCount) * 2 * Math.PI;
+    const points: Position3D[] = [
+      { x: 0, y: GROUND_Y + 0.005, z: 0 },
+      {
+        x: maxRadius * Math.cos(angle),
+        y: GROUND_Y + 0.005,
+        z: maxRadius * Math.sin(angle),
+      },
+    ];
+    boulevards.push({ points, width: ROAD_WIDTH * 0.6, zone: 'spoke' });
+  }
+
+  return boulevards;
+}
+
 function generateRingRoad(radius: number, zone: 'inner' | 'outer'): RoadSegment {
   const points: Position3D[] = [];
   for (let i = 0; i <= RING_ROAD_ARC_SEGMENTS; i++) {
@@ -244,5 +273,12 @@ export function computeCityLayout(
     ringRoads.push(generateRingRoad(outerRadius, 'outer'));
   }
 
-  return { buildings, districts, gatePosition, ringRoads, boulevards: [] };
+  const boulevards = generateBoulevards(
+    innerRadius,
+    outerRadius,
+    innerServices.length,
+    outerServices.length
+  );
+
+  return { buildings, districts, gatePosition, ringRoads, boulevards };
 }

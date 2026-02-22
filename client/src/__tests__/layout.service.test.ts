@@ -407,3 +407,69 @@ describe('computeCityLayout — ring roads', () => {
     expect(r1.ringRoads).toEqual(r2.ringRoads);
   });
 });
+
+describe('computeCityLayout — sector boulevards', () => {
+  it('returns boulevards array in layout', () => {
+    const services = [makeService('s1', 'Health', 1)];
+    const endpoints = [makeEndpoint('e1', 's1', '/health', 'get')];
+    const result = computeCityLayout(services, endpoints);
+    expect(result.boulevards).toBeDefined();
+    expect(Array.isArray(result.boulevards)).toBe(true);
+  });
+
+  it('generates spokes connecting ring to center', () => {
+    const services = [
+      makeService('s1', 'Auth', 1),
+      makeService('s2', 'Users', 1),
+      makeService('s3', 'Health', 1),
+    ];
+    const endpoints = [
+      makeEndpoint('e1', 's1', '/login', 'post', 0, true),
+      makeEndpoint('e2', 's2', '/users', 'get', 0, true),
+      makeEndpoint('e3', 's3', '/health', 'get', 0, false),
+    ];
+    const result = computeCityLayout(services, endpoints);
+    const spokes = result.boulevards.filter((b) => b.zone === 'spoke');
+    expect(spokes.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('spoke count follows formula max(3, ceil(districtCount / 3))', () => {
+    // 12 services all auth → 12 districts → ceil(12/3) = 4 spokes
+    const services = Array.from({ length: 12 }, (_, i) =>
+      makeService(`s${i}`, `Svc${String(i).padStart(2, '0')}`, 1)
+    );
+    const endpoints = services.map((s, i) => makeEndpoint(`e${i}`, s.id, `/path`, 'get', 0, true));
+    const result = computeCityLayout(services, endpoints);
+    const spokes = result.boulevards.filter((b) => b.zone === 'spoke');
+    expect(spokes.length).toBe(4);
+  });
+
+  it('each spoke starts near center and ends at ring radius', () => {
+    const services = [makeService('s1', 'Auth', 1), makeService('s2', 'Users', 1)];
+    const endpoints = [
+      makeEndpoint('e1', 's1', '/login', 'post', 0, true),
+      makeEndpoint('e2', 's2', '/users', 'get', 0, false),
+    ];
+    const result = computeCityLayout(services, endpoints);
+    for (const spoke of result.boulevards) {
+      const first = spoke.points[0]!;
+      const firstDist = Math.sqrt(first.x ** 2 + first.z ** 2);
+      expect(firstDist).toBeLessThan(2);
+
+      const last = spoke.points[spoke.points.length - 1]!;
+      const lastDist = Math.sqrt(last.x ** 2 + last.z ** 2);
+      expect(lastDist).toBeGreaterThan(firstDist);
+    }
+  });
+
+  it('boulevard generation is deterministic', () => {
+    const services = [makeService('s1', 'Auth', 1), makeService('s2', 'Health', 1)];
+    const endpoints = [
+      makeEndpoint('e1', 's1', '/login', 'post', 0, true),
+      makeEndpoint('e2', 's2', '/health', 'get', 0, false),
+    ];
+    const r1 = computeCityLayout(services, endpoints);
+    const r2 = computeCityLayout(services, endpoints);
+    expect(r1.boulevards).toEqual(r2.boulevards);
+  });
+});
