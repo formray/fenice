@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { WorldServiceSchema, WorldEndpointSchema, WorldEdgeSchema } from './world.schema.js';
+import { WorldDeltaEventSchema } from './world-delta.schema.js';
 
 // ─── Client → Server messages ───────────────────────────────────────────────
 
@@ -53,7 +54,7 @@ const WorldDeltaMessage = z.object({
   schemaVersion: z.number().int(),
   seq: z.number().int().nonnegative(),
   ts: z.string(),
-  events: z.array(z.unknown()),
+  events: z.array(WorldDeltaEventSchema),
 });
 
 const WorldErrorMessage = z.object({

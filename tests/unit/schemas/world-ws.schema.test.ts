@@ -99,6 +99,39 @@ describe('World WS protocol schemas', () => {
       expect(result.success).toBe(true);
     });
 
+    it('world.delta with typed events validates against schema', () => {
+      const result = WorldServerMessageSchema.safeParse({
+        type: 'world.delta',
+        schemaVersion: 1,
+        seq: 3,
+        ts: '2026-02-22T10:00:00.000Z',
+        events: [
+          {
+            type: 'endpoint.metrics.updated',
+            entityId: 'endpoint:get:/health',
+            payload: { rps: 120, p50: 12, p95: 45, errorRate: 0.01 },
+          },
+          {
+            type: 'endpoint.health.updated',
+            entityId: 'endpoint:get:/health',
+            payload: { status: 'healthy' },
+          },
+        ],
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('world.delta rejects events with unknown type', () => {
+      const result = WorldServerMessageSchema.safeParse({
+        type: 'world.delta',
+        schemaVersion: 1,
+        seq: 4,
+        ts: '2026-02-22T10:00:00.000Z',
+        events: [{ type: 'bogus.event', entityId: 'x' }],
+      });
+      expect(result.success).toBe(false);
+    });
+
     it('should validate world.error', () => {
       const result = WorldServerMessageSchema.safeParse({
         type: 'world.error',

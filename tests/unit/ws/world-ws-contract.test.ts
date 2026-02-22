@@ -219,8 +219,26 @@ describe('W1-T10 — WS Protocol Contract Tests', () => {
       manager.addConnection('u1', ws);
 
       // Pre-fill buffer
-      manager.addToBuffer(1, JSON.stringify({ type: 'world.snapshot', seq: 1 }));
-      manager.addToBuffer(2, JSON.stringify({ type: 'world.delta', seq: 2 }));
+      manager.addToBuffer(
+        1,
+        JSON.stringify({
+          type: 'world.snapshot',
+          seq: 1,
+          schemaVersion: 1,
+          ts: new Date().toISOString(),
+          data: { services: [], endpoints: [], edges: [] },
+        })
+      );
+      manager.addToBuffer(
+        2,
+        JSON.stringify({
+          type: 'world.delta',
+          seq: 2,
+          schemaVersion: 1,
+          ts: new Date().toISOString(),
+          events: [],
+        })
+      );
 
       // Pre-cache model
       projection.buildWorldModel(OPENAPI_FIXTURE);
