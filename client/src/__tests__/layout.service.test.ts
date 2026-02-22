@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { computeCityLayout } from '../services/layout.service';
 import type { WorldService, WorldEndpoint } from '../types/world';
-import { MIN_HEIGHT, MAX_HEIGHT, BUILDING_BASE_SIZE } from '../utils/constants';
+import { MIN_HEIGHT, MAX_HEIGHT, BUILDING_BASE_SIZE, ZONE_LAYOUT_CONFIG } from '../utils/constants';
 
 function makeService(id: string, tag: string, endpointCount: number): WorldService {
   return { id, tag, endpointCount };
@@ -302,5 +302,41 @@ describe('computeCityLayout — radial zone layout', () => {
       ...large.districts.map((d) => Math.sqrt(d.center.x ** 2 + d.center.z ** 2))
     );
     expect(maxDistLarge).toBeGreaterThan(maxDistSmall);
+  });
+});
+
+describe('computeCityLayout — zone-specific gaps', () => {
+  it('public-perimeter districts use wider gap than protected-core', () => {
+    const services = [makeService('s1', 'Auth', 2), makeService('s2', 'Health', 2)];
+    const endpoints = [
+      makeEndpoint('e1', 's1', '/login', 'post', 0, true),
+      makeEndpoint('e2', 's1', '/refresh', 'post', 0, true),
+      makeEndpoint('e3', 's2', '/health', 'get', 0, false),
+      makeEndpoint('e4', 's2', '/ready', 'get', 0, false),
+    ];
+    const result = computeCityLayout(services, endpoints);
+    const protectedDistrict = result.districts.find((d) => d.zone === 'protected-core')!;
+    const publicDistrict = result.districts.find((d) => d.zone === 'public-perimeter')!;
+    const protectedWidth = protectedDistrict.bounds.maxX - protectedDistrict.bounds.minX;
+    const publicWidth = publicDistrict.bounds.maxX - publicDistrict.bounds.minX;
+    expect(publicWidth).toBeGreaterThan(protectedWidth);
+  });
+
+  it('zone-specific district sizes match expected formula', () => {
+    const services = [makeService('s1', 'Test', 4)];
+    const endpoints = [
+      makeEndpoint('e1', 's1', '/a', 'get', 0, false),
+      makeEndpoint('e2', 's1', '/b', 'get', 0, false),
+      makeEndpoint('e3', 's1', '/c', 'get', 0, false),
+      makeEndpoint('e4', 's1', '/d', 'get', 0, false),
+    ];
+    const result = computeCityLayout(services, endpoints);
+    const district = result.districts[0]!;
+    const cfg = ZONE_LAYOUT_CONFIG['public-perimeter'];
+    const cols = 2;
+    const expectedWidth =
+      cols * (BUILDING_BASE_SIZE + cfg.buildingGap) - cfg.buildingGap + cfg.districtPadding * 2;
+    const actualWidth = district.bounds.maxX - district.bounds.minX;
+    expect(actualWidth).toBeCloseTo(expectedWidth, 5);
   });
 });

@@ -1,14 +1,13 @@
 import type { WorldService, WorldEndpoint } from '../types/world';
 import {
   BUILDING_BASE_SIZE,
-  BUILDING_GAP,
-  DISTRICT_PADDING,
   DISTRICT_GAP,
   MIN_HEIGHT,
   MAX_HEIGHT,
   MIN_INNER_RADIUS,
   MIN_OUTER_RADIUS,
   RING_GAP,
+  ZONE_LAYOUT_CONFIG,
 } from '../utils/constants';
 
 export interface Position3D {
@@ -50,11 +49,17 @@ function classifyServiceZone(
   return authCount > 0 ? 'protected-core' : 'public-perimeter';
 }
 
-function computeDistrictSize(endpointCount: number): { width: number; depth: number } {
+function computeDistrictSize(
+  endpointCount: number,
+  zone: 'public-perimeter' | 'protected-core'
+): { width: number; depth: number } {
+  const cfg = ZONE_LAYOUT_CONFIG[zone];
   const cols = Math.max(1, Math.ceil(Math.sqrt(endpointCount)));
   const rows = Math.max(1, Math.ceil(endpointCount / cols));
-  const width = cols * (BUILDING_BASE_SIZE + BUILDING_GAP) - BUILDING_GAP + DISTRICT_PADDING * 2;
-  const depth = rows * (BUILDING_BASE_SIZE + BUILDING_GAP) - BUILDING_GAP + DISTRICT_PADDING * 2;
+  const width =
+    cols * (BUILDING_BASE_SIZE + cfg.buildingGap) - cfg.buildingGap + cfg.districtPadding * 2;
+  const depth =
+    rows * (BUILDING_BASE_SIZE + cfg.buildingGap) - cfg.buildingGap + cfg.districtPadding * 2;
   return { width, depth };
 }
 
@@ -116,11 +121,11 @@ export function computeCityLayout(
 
   const innerSizes = innerServices.map((s) => {
     const eps = endpointsByService.get(s.id) ?? [];
-    return computeDistrictSize(eps.length);
+    return computeDistrictSize(eps.length, 'protected-core');
   });
   const outerSizes = outerServices.map((s) => {
     const eps = endpointsByService.get(s.id) ?? [];
-    return computeDistrictSize(eps.length);
+    return computeDistrictSize(eps.length, 'public-perimeter');
   });
 
   const innerRadius = computeRingRadius(innerSizes, MIN_INNER_RADIUS);
@@ -149,6 +154,8 @@ export function computeCityLayout(
   ): void {
     const count = ring.length;
     if (count === 0) return;
+
+    const cfg = ZONE_LAYOUT_CONFIG[zone];
 
     for (let i = 0; i < count; i++) {
       const service = ring[i]!;
@@ -186,8 +193,8 @@ export function computeCityLayout(
         const eCol = eIdx % cols;
         const eRow = Math.floor(eIdx / cols);
 
-        const x = originX + DISTRICT_PADDING + eCol * (BUILDING_BASE_SIZE + BUILDING_GAP);
-        const z = originZ + DISTRICT_PADDING + eRow * (BUILDING_BASE_SIZE + BUILDING_GAP);
+        const x = originX + cfg.districtPadding + eCol * (BUILDING_BASE_SIZE + cfg.buildingGap);
+        const z = originZ + cfg.districtPadding + eRow * (BUILDING_BASE_SIZE + cfg.buildingGap);
         const normalizedHeight = maxParams > 0 ? ep.parameterCount / maxParams : 0;
         const height = MIN_HEIGHT + normalizedHeight * (MAX_HEIGHT - MIN_HEIGHT);
 
