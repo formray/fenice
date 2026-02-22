@@ -1,5 +1,6 @@
 import type { WsConnection } from './manager.js';
 import type { WorldModel } from '../schemas/world.schema.js';
+import type { WorldDeltaEvent } from '../schemas/world-delta.schema.js';
 
 const WS_OPEN = 1;
 
@@ -172,5 +173,20 @@ export class WorldWsManager {
         conn.ws.send(data);
       }
     }
+  }
+
+  broadcastDelta(events: WorldDeltaEvent[]): { seq: number; ts: string } {
+    const seq = this.nextSeq();
+    const ts = new Date().toISOString();
+    const msg = JSON.stringify({
+      type: 'world.delta',
+      schemaVersion: 1,
+      seq,
+      ts,
+      events,
+    });
+    this.addToBuffer(seq, msg);
+    this.broadcastToSubscribed(msg);
+    return { seq, ts };
   }
 }

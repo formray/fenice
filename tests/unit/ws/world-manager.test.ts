@@ -192,6 +192,63 @@ describe('WorldWsManager', () => {
     });
   });
 
+  describe('broadcastDelta', () => {
+    it('allocates monotonic seq and broadcasts to subscribed', () => {
+      const ws1 = createMockWs();
+      const ws2 = createMockWs();
+      manager.addConnection('u1', ws1);
+      manager.addConnection('u2', ws2);
+      manager.markSubscribed('u1');
+      // u2 not subscribed
+
+      const events = [
+        {
+          type: 'endpoint.health.updated' as const,
+          entityId: 'ep:1',
+          payload: { status: 'healthy' as const },
+        },
+      ];
+      const result = manager.broadcastDelta(events);
+
+      expect(result.seq).toBe(1);
+      expect(ws1.send).toHaveBeenCalledTimes(1);
+      expect(ws2.send).not.toHaveBeenCalled();
+
+      const firstCall = ws1.send.mock.calls[0];
+      const sent = JSON.parse(String(firstCall?.[0]));
+      expect(sent.type).toBe('world.delta');
+      expect(sent.schemaVersion).toBe(1);
+      expect(sent.seq).toBe(1);
+      expect(sent.events).toHaveLength(1);
+      expect(typeof sent.ts).toBe('string');
+    });
+
+    it('adds delta to ring buffer', () => {
+      const ws = createMockWs();
+      manager.addConnection('u1', ws);
+      manager.markSubscribed('u1');
+
+      manager.broadcastDelta([]);
+      const buffered = manager.getBufferedMessagesFrom(1);
+      expect(buffered).not.toBeNull();
+      expect(buffered).toHaveLength(1);
+    });
+
+    it('seq increments across multiple deltas', () => {
+      const ws = createMockWs();
+      manager.addConnection('u1', ws);
+      manager.markSubscribed('u1');
+
+      const r1 = manager.broadcastDelta([]);
+      const r2 = manager.broadcastDelta([]);
+      const r3 = manager.broadcastDelta([]);
+
+      expect(r1.seq).toBe(1);
+      expect(r2.seq).toBe(2);
+      expect(r3.seq).toBe(3);
+    });
+  });
+
   describe('broadcastToSubscribed', () => {
     it('should send to all subscribed connections', () => {
       const ws1 = createMockWs();
