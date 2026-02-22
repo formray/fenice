@@ -147,6 +147,7 @@ export function HUD(): React.JSX.Element {
           Routing
         </div>
         <div>Lines passing through the center gate are auth-gated routes.</div>
+        <div style={{ marginTop: '4px' }}>Link colors are driven by live telemetry simulation.</div>
       </div>
     </div>
   );

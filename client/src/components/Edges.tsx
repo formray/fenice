@@ -4,6 +4,7 @@ import type { BuildingLayout, Position3D } from '../services/layout.service';
 import type { SemanticState } from '../types/semantic';
 import { LINK_STATE_COLORS } from '../utils/colors';
 import type { LinkState } from '../types/semantic';
+import { useSelectionStore } from '../stores/selection.store';
 
 interface EdgesProps {
   edges: WorldEdge[];
@@ -50,6 +51,7 @@ export function Edges({
   gatePosition,
 }: EdgesProps): React.JSX.Element {
   const posMap = new Map(buildingLayouts.map((b) => [b.endpointId, b.position]));
+  const selectedId = useSelectionStore((s) => s.selectedId);
 
   return (
     <group>
@@ -60,6 +62,14 @@ export function Edges({
 
         const sourceEp = endpointMap.get(edge.sourceId);
         const targetEp = endpointMap.get(edge.targetId);
+        const isIntraService =
+          !!sourceEp && !!targetEp && sourceEp.serviceId === targetEp.serviceId;
+        const isRelatedToSelection =
+          selectedId !== null && (edge.sourceId === selectedId || edge.targetId === selectedId);
+
+        // Reduce visual clutter: hide intra-service mesh lines unless user focuses related endpoint.
+        if (isIntraService && !isRelatedToSelection) return null;
+
         const sourceSem = endpointSemantics[edge.sourceId];
         const targetSem = endpointSemantics[edge.targetId];
         const edgeLinkState = worstLinkState(sourceSem?.linkState, targetSem?.linkState);
@@ -72,8 +82,9 @@ export function Edges({
         const isDashed = style.edgeStyle === 'dashed';
         const dashProps = isDashed ? { dashSize: 0.5, gapSize: 0.3 } : {};
         const lineWidth = isDashed ? 1 : 1.5;
-        const routeWidth = isAuthGated ? lineWidth * 0.85 : lineWidth;
-        const routeOpacity = isAuthGated ? Math.max(0.2, style.opacity * 0.7) : style.opacity;
+        const routeWidth = isAuthGated ? lineWidth * 0.8 : lineWidth;
+        const baseOpacity = isAuthGated ? Math.max(0.2, style.opacity * 0.7) : style.opacity;
+        const routeOpacity = isIntraService ? Math.min(baseOpacity, 0.18) : baseOpacity;
 
         return (
           <Line

@@ -4,7 +4,7 @@ import { OrbitControls } from '@react-three/drei';
 import { City } from './City';
 
 export function Scene(): React.JSX.Element {
-  const [showGrid] = useState(true);
+  const [showGrid] = useState(false);
 
   return (
     <Canvas camera={{ position: [20, 20, 20], fov: 50 }} style={{ width: '100%', height: '100%' }}>

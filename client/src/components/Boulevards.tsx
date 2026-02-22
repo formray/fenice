@@ -1,5 +1,5 @@
-import { Line } from '@react-three/drei';
 import type { RoadSegment } from '../services/layout.service';
+import { RoadPolyline } from './RoadPolyline';
 
 interface BoulevardProps {
   boulevards: RoadSegment[];
@@ -8,23 +8,17 @@ interface BoulevardProps {
 export function Boulevards({ boulevards }: BoulevardProps): React.JSX.Element {
   return (
     <group>
-      {boulevards.map((blvd, i) => {
-        const points = blvd.points.map((p) => [p.x, p.y, p.z] as [number, number, number]);
-        return (
-          <group key={`blvd-${i}`}>
-            {/* Spoke surface — dark lane */}
-            <Line
-              points={points}
-              color="#0a1a3e"
-              lineWidth={blvd.width * 10}
-              opacity={0.3}
-              transparent
-            />
-            {/* Spoke center marking */}
-            <Line points={points} color="#00E5FF" lineWidth={1} opacity={0.1} transparent />
-          </group>
-        );
-      })}
+      {boulevards.map((blvd, i) => (
+        <RoadPolyline
+          key={`blvd-${i}`}
+          points={blvd.points}
+          width={blvd.width}
+          surfaceColor="#07132a"
+          surfaceOpacity={0.68}
+          markingColor="#00E5FF"
+          markingOpacity={0.2}
+        />
+      ))}
     </group>
   );
 }
