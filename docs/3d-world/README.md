@@ -1,11 +1,21 @@
 # FENICE 3D World Docs
 
-Stato: M1 completato, pianificazione M2 attiva.
+Stato: M1 completato (2026-02-22), M2 in avvio con sequenza M2A -> M2B -> M2C.
+
+## Milestone snapshot
+1. `M1`: DONE - static city da OpenAPI verificata.
+2. `M2A`: IN_PROGRESS - realtime overlay tecnico.
+3. `M2B`: PLANNED - semantic layer (auth/public/link states).
+4. `M2C`: PLANNED - visual skin Tron.
+5. `M3`: PLANNED - AI Builder PR-only.
+6. `M4`: PLANNED - multi-user collaboration.
 
 ## Start
 1. `00_START_HERE.md`
 2. `FENICE_3D_World_MasterPack_v1.md`
 3. `FENICE_3D_World_M2_RealtimeOverlay_Plan.md`
+4. `FENICE_3D_World_PlanningBoard_v0.1.md`
+5. `FENICE_3D_World_Handoff_Brief_M2_Week2.md`
 
 ## Core design
 1. `FENICE_3D_World_Approccio_Tecnico_v0.2.md`
