@@ -47,12 +47,12 @@ Status: Active
 | W2-T01 | Protocol | Finalizzare delta tipizzati v1 (`metrics`,`health`) | Claude | 2d | IN_PROGRESS | D1 | Schema + contract tests |
 | W2-T02 | Backend | Aggregazione + emissione `world.delta` con seq monotono | Claude | 2d | IN_PROGRESS | W2-T01 | Producer stabile |
 | W2-T03 | Frontend | Reducer delta + guard out-of-order + resync fallback | Claude | 2d | IN_PROGRESS | W2-T01,W2-T02 | Overlay tecnico robusto |
-| W2-T04 | Product/Arch | Definire semantic graph model (nodes/edges/zones) | Shared | 1d | PLANNED | D6 | Documento semantic contract |
-| W2-T05 | Product/Arch | Definire auth gate rules + blocked reasons | Giuseppe + Codex | 1d | PLANNED | W2-T04 | Rulebook semantico |
+| W2-T04 | Product/Arch | Definire semantic graph model (nodes/edges/zones) | Shared | 1d | IN_PROGRESS | D6 | `FENICE_3D_World_M2B_SemanticContract_v1.md` (draft) |
+| W2-T05 | Product/Arch | Definire auth gate rules + blocked reasons | Giuseppe + Codex | 1d | IN_PROGRESS | W2-T04 | Reason codes nel semantic contract (pending approval) |
 | W2-T06 | Frontend | Render link states (`ok/degraded/blocked`) e gate feedback | Shared | 2d | PLANNED | W2-T05 | M2B visibile in client |
 | W2-T07 | UX | Definire Tron visual tokens (palette, glow, motion) | Giuseppe + Codex | 1d | PLANNED | D7 | Style spec M2C |
 | W2-T08 | Frontend | Applicare skin Tron a link/district/layout | Shared | 2d | PLANNED | W2-T06,W2-T07 | Esperienza Tron navigabile |
-| W2-T09 | QA | E2E semantic scenarios (anon/authenticated/degraded) | Shared | 1d | PLANNED | W2-T06 | Accuracy report semantico |
+| W2-T09 | QA | E2E semantic scenarios (anon/authenticated/degraded) | Shared | 1d | IN_PROGRESS | W2-T06 | `FENICE_3D_World_M2B_Acceptance_Matrix.md` + accuracy report |
 | W2-T10 | Demo | Script "auth gate + public outside perimeter + neon links" | Shared | 1d | PLANNED | W2-T08,W2-T09 | Demo M2 completa |
 
 ## Current sprint proposal (next 7 days)

@@ -116,9 +116,10 @@ Aggiungere overlay realtime read-only e un layer semantico navigabile (auth/publ
 ## Deliverable
 1. Protocol schema aggiornato + tests.
 2. Realtime overlay tecnico (M2A) in demo.
-3. Semantic contract document + scenari verificati (M2B).
-4. Tron visual tokens + layout logico applicato (M2C).
-5. Report KPI tecnico + semantico + rendering.
+3. Semantic contract document (`FENICE_3D_World_M2B_SemanticContract_v1.md`).
+4. Scenari verificati (`FENICE_3D_World_M2B_Acceptance_Matrix.md` + test report).
+5. Tron visual tokens + layout logico applicato (M2C).
+6. Report KPI tecnico + semantico + rendering.
 
 ## Exit criteria
 1. Tutti i test backend/client verdi.
