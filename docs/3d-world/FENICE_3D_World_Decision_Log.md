@@ -44,6 +44,23 @@
    - Impatto: task W2-T04/W2-T05/W2-T09 passano in IN_PROGRESS in attesa approvazione prodotto.
    - Owner: Shared
 
+5. Decisione: soglie metriche M2B.
+   - Valori default: p95 > 500ms = latency_high, errorRate > 0.05 (5%) = error_rate_high.
+   - Configurabili via MetricsClassifierConfig.
+   - Metriche producono solo stato `degraded`, mai `blocked`.
+   - Owner: Giuseppe (approvato)
+
+6. Decisione: anti-flap metriche.
+   - Ring buffer 3 campioni per endpoint.
+   - Ingresso e uscita dallo stato richiedono 3 campioni consecutivi sopra/sotto soglia.
+   - Precedenza: error_rate_high > latency_high.
+   - Owner: Giuseppe (approvato)
+
+7. Decisione: policyState default `allow`.
+   - Nessun segnale deny reale disponibile in M2B.
+   - Sara' integrato quando gateway fornisce 403/deny signals.
+   - Owner: Shared
+
 ## Template nuova decisione
 ```md
 ## YYYY-MM-DD
