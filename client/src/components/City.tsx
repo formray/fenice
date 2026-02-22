@@ -5,6 +5,8 @@ import { Building } from './Building';
 import { Edges } from './Edges';
 import { District } from './District';
 import { AuthGate } from './AuthGate';
+import { RingRoads } from './RingRoads';
+import { Boulevards } from './Boulevards';
 
 export function City(): React.JSX.Element | null {
   const services = useWorldStore((s) => s.services);
@@ -20,6 +22,8 @@ export function City(): React.JSX.Element | null {
 
   return (
     <group>
+      <RingRoads roads={layout.ringRoads} />
+      <Boulevards boulevards={layout.boulevards} />
       <AuthGate position={layout.gatePosition} />
       {layout.districts.map((d) => (
         <District key={d.serviceId} layout={d} />

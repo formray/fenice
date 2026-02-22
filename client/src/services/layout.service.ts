@@ -1,14 +1,16 @@
 import type { WorldService, WorldEndpoint } from '../types/world';
 import {
   BUILDING_BASE_SIZE,
-  BUILDING_GAP,
-  DISTRICT_PADDING,
   DISTRICT_GAP,
+  GROUND_Y,
   MIN_HEIGHT,
   MAX_HEIGHT,
   MIN_INNER_RADIUS,
   MIN_OUTER_RADIUS,
   RING_GAP,
+  RING_ROAD_ARC_SEGMENTS,
+  ROAD_WIDTH,
+  ZONE_LAYOUT_CONFIG,
 } from '../utils/constants';
 
 export interface Position3D {
@@ -33,10 +35,18 @@ export interface DistrictLayout {
   bounds: { minX: number; maxX: number; minZ: number; maxZ: number };
 }
 
+export interface RoadSegment {
+  points: Position3D[];
+  width: number;
+  zone: 'inner' | 'outer' | 'spoke';
+}
+
 export interface CityLayout {
   buildings: BuildingLayout[];
   districts: DistrictLayout[];
   gatePosition: Position3D;
+  ringRoads: RoadSegment[];
+  boulevards: RoadSegment[];
 }
 
 type ServiceZone = 'public-perimeter' | 'protected-core';
@@ -50,11 +60,17 @@ function classifyServiceZone(
   return authCount > 0 ? 'protected-core' : 'public-perimeter';
 }
 
-function computeDistrictSize(endpointCount: number): { width: number; depth: number } {
+function computeDistrictSize(
+  endpointCount: number,
+  zone: 'public-perimeter' | 'protected-core'
+): { width: number; depth: number } {
+  const cfg = ZONE_LAYOUT_CONFIG[zone];
   const cols = Math.max(1, Math.ceil(Math.sqrt(endpointCount)));
   const rows = Math.max(1, Math.ceil(endpointCount / cols));
-  const width = cols * (BUILDING_BASE_SIZE + BUILDING_GAP) - BUILDING_GAP + DISTRICT_PADDING * 2;
-  const depth = rows * (BUILDING_BASE_SIZE + BUILDING_GAP) - BUILDING_GAP + DISTRICT_PADDING * 2;
+  const width =
+    cols * (BUILDING_BASE_SIZE + cfg.buildingGap) - cfg.buildingGap + cfg.districtPadding * 2;
+  const depth =
+    rows * (BUILDING_BASE_SIZE + cfg.buildingGap) - cfg.buildingGap + cfg.districtPadding * 2;
   return { width, depth };
 }
 
@@ -70,6 +86,48 @@ function computeRingRadius(
   );
   const computed = totalArc / (2 * Math.PI);
   return Math.max(minRadius, computed);
+}
+
+function generateBoulevards(
+  innerRadius: number,
+  outerRadius: number,
+  innerCount: number,
+  outerCount: number
+): RoadSegment[] {
+  const boulevards: RoadSegment[] = [];
+  const maxRadius = outerCount > 0 ? outerRadius : innerRadius;
+  const totalDistricts = innerCount + outerCount;
+  if (totalDistricts === 0) return boulevards;
+
+  const spokeCount = Math.max(3, Math.ceil(totalDistricts / 3));
+
+  for (let i = 0; i < spokeCount; i++) {
+    const angle = (i / spokeCount) * 2 * Math.PI;
+    const points: Position3D[] = [
+      { x: 0, y: GROUND_Y + 0.005, z: 0 },
+      {
+        x: maxRadius * Math.cos(angle),
+        y: GROUND_Y + 0.005,
+        z: maxRadius * Math.sin(angle),
+      },
+    ];
+    boulevards.push({ points, width: ROAD_WIDTH * 0.6, zone: 'spoke' });
+  }
+
+  return boulevards;
+}
+
+function generateRingRoad(radius: number, zone: 'inner' | 'outer'): RoadSegment {
+  const points: Position3D[] = [];
+  for (let i = 0; i <= RING_ROAD_ARC_SEGMENTS; i++) {
+    const angle = (i / RING_ROAD_ARC_SEGMENTS) * 2 * Math.PI;
+    points.push({
+      x: radius * Math.cos(angle),
+      y: GROUND_Y + 0.005,
+      z: radius * Math.sin(angle),
+    });
+  }
+  return { points, width: ROAD_WIDTH, zone };
 }
 
 /**
@@ -91,7 +149,7 @@ export function computeCityLayout(
   const gatePosition: Position3D = { x: 0, y: 0, z: 0 };
 
   if (services.length === 0 || endpoints.length === 0) {
-    return { buildings: [], districts: [], gatePosition };
+    return { buildings: [], districts: [], gatePosition, ringRoads: [], boulevards: [] };
   }
 
   const sortedServices = [...services].sort((a, b) => a.tag.localeCompare(b.tag));
@@ -116,11 +174,11 @@ export function computeCityLayout(
 
   const innerSizes = innerServices.map((s) => {
     const eps = endpointsByService.get(s.id) ?? [];
-    return computeDistrictSize(eps.length);
+    return computeDistrictSize(eps.length, 'protected-core');
   });
   const outerSizes = outerServices.map((s) => {
     const eps = endpointsByService.get(s.id) ?? [];
-    return computeDistrictSize(eps.length);
+    return computeDistrictSize(eps.length, 'public-perimeter');
   });
 
   const innerRadius = computeRingRadius(innerSizes, MIN_INNER_RADIUS);
@@ -149,6 +207,8 @@ export function computeCityLayout(
   ): void {
     const count = ring.length;
     if (count === 0) return;
+
+    const cfg = ZONE_LAYOUT_CONFIG[zone];
 
     for (let i = 0; i < count; i++) {
       const service = ring[i]!;
@@ -186,8 +246,8 @@ export function computeCityLayout(
         const eCol = eIdx % cols;
         const eRow = Math.floor(eIdx / cols);
 
-        const x = originX + DISTRICT_PADDING + eCol * (BUILDING_BASE_SIZE + BUILDING_GAP);
-        const z = originZ + DISTRICT_PADDING + eRow * (BUILDING_BASE_SIZE + BUILDING_GAP);
+        const x = originX + cfg.districtPadding + eCol * (BUILDING_BASE_SIZE + cfg.buildingGap);
+        const z = originZ + cfg.districtPadding + eRow * (BUILDING_BASE_SIZE + cfg.buildingGap);
         const normalizedHeight = maxParams > 0 ? ep.parameterCount / maxParams : 0;
         const height = MIN_HEIGHT + normalizedHeight * (MAX_HEIGHT - MIN_HEIGHT);
 
@@ -205,5 +265,20 @@ export function computeCityLayout(
   placeRing(innerServices, innerSizes, innerRadius, 'protected-core');
   placeRing(outerServices, outerSizes, outerRadius, 'public-perimeter');
 
-  return { buildings, districts, gatePosition };
+  const ringRoads: RoadSegment[] = [];
+  if (innerServices.length > 0) {
+    ringRoads.push(generateRingRoad(innerRadius, 'inner'));
+  }
+  if (outerServices.length > 0) {
+    ringRoads.push(generateRingRoad(outerRadius, 'outer'));
+  }
+
+  const boulevards = generateBoulevards(
+    innerRadius,
+    outerRadius,
+    innerServices.length,
+    outerServices.length
+  );
+
+  return { buildings, districts, gatePosition, ringRoads, boulevards };
 }

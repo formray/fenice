@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { computeCityLayout } from '../services/layout.service';
 import type { WorldService, WorldEndpoint } from '../types/world';
-import { MIN_HEIGHT, MAX_HEIGHT, BUILDING_BASE_SIZE } from '../utils/constants';
+import { MIN_HEIGHT, MAX_HEIGHT, BUILDING_BASE_SIZE, ZONE_LAYOUT_CONFIG } from '../utils/constants';
 
 function makeService(id: string, tag: string, endpointCount: number): WorldService {
   return { id, tag, endpointCount };
@@ -302,5 +302,174 @@ describe('computeCityLayout — radial zone layout', () => {
       ...large.districts.map((d) => Math.sqrt(d.center.x ** 2 + d.center.z ** 2))
     );
     expect(maxDistLarge).toBeGreaterThan(maxDistSmall);
+  });
+});
+
+describe('computeCityLayout — zone-specific gaps', () => {
+  it('public-perimeter districts use wider gap than protected-core', () => {
+    const services = [makeService('s1', 'Auth', 2), makeService('s2', 'Health', 2)];
+    const endpoints = [
+      makeEndpoint('e1', 's1', '/login', 'post', 0, true),
+      makeEndpoint('e2', 's1', '/refresh', 'post', 0, true),
+      makeEndpoint('e3', 's2', '/health', 'get', 0, false),
+      makeEndpoint('e4', 's2', '/ready', 'get', 0, false),
+    ];
+    const result = computeCityLayout(services, endpoints);
+    const protectedDistrict = result.districts.find((d) => d.zone === 'protected-core')!;
+    const publicDistrict = result.districts.find((d) => d.zone === 'public-perimeter')!;
+    const protectedWidth = protectedDistrict.bounds.maxX - protectedDistrict.bounds.minX;
+    const publicWidth = publicDistrict.bounds.maxX - publicDistrict.bounds.minX;
+    expect(publicWidth).toBeGreaterThan(protectedWidth);
+  });
+
+  it('zone-specific district sizes match expected formula', () => {
+    const services = [makeService('s1', 'Test', 4)];
+    const endpoints = [
+      makeEndpoint('e1', 's1', '/a', 'get', 0, false),
+      makeEndpoint('e2', 's1', '/b', 'get', 0, false),
+      makeEndpoint('e3', 's1', '/c', 'get', 0, false),
+      makeEndpoint('e4', 's1', '/d', 'get', 0, false),
+    ];
+    const result = computeCityLayout(services, endpoints);
+    const district = result.districts[0]!;
+    const cfg = ZONE_LAYOUT_CONFIG['public-perimeter'];
+    const cols = 2;
+    const expectedWidth =
+      cols * (BUILDING_BASE_SIZE + cfg.buildingGap) - cfg.buildingGap + cfg.districtPadding * 2;
+    const actualWidth = district.bounds.maxX - district.bounds.minX;
+    expect(actualWidth).toBeCloseTo(expectedWidth, 5);
+  });
+});
+
+describe('computeCityLayout — ring roads', () => {
+  it('returns ringRoads array in layout', () => {
+    const services = [makeService('s1', 'Health', 1)];
+    const endpoints = [makeEndpoint('e1', 's1', '/health', 'get')];
+    const result = computeCityLayout(services, endpoints);
+    expect(result.ringRoads).toBeDefined();
+    expect(Array.isArray(result.ringRoads)).toBe(true);
+  });
+
+  it('generates outer ring road for public-only services', () => {
+    const services = [makeService('s1', 'Svc1', 1), makeService('s2', 'Svc2', 1)];
+    const endpoints = [
+      makeEndpoint('e1', 's1', '/a', 'get', 0, false),
+      makeEndpoint('e2', 's2', '/b', 'get', 0, false),
+    ];
+    const result = computeCityLayout(services, endpoints);
+    const outerSegments = result.ringRoads.filter((r) => r.zone === 'outer');
+    expect(outerSegments.length).toBeGreaterThan(0);
+  });
+
+  it('generates inner and outer ring roads when both zones exist', () => {
+    const services = [makeService('s1', 'Auth', 1), makeService('s2', 'Health', 1)];
+    const endpoints = [
+      makeEndpoint('e1', 's1', '/login', 'post', 0, true),
+      makeEndpoint('e2', 's2', '/health', 'get', 0, false),
+    ];
+    const result = computeCityLayout(services, endpoints);
+    const innerSegments = result.ringRoads.filter((r) => r.zone === 'inner');
+    const outerSegments = result.ringRoads.filter((r) => r.zone === 'outer');
+    expect(innerSegments.length).toBeGreaterThan(0);
+    expect(outerSegments.length).toBeGreaterThan(0);
+  });
+
+  it('ring road points lie at the ring radius', () => {
+    const services = [makeService('s1', 'Auth', 1), makeService('s2', 'Users', 1)];
+    const endpoints = [
+      makeEndpoint('e1', 's1', '/login', 'post', 0, true),
+      makeEndpoint('e2', 's2', '/users', 'get', 0, true),
+    ];
+    const result = computeCityLayout(services, endpoints);
+    const innerRoads = result.ringRoads.filter((r) => r.zone === 'inner');
+    for (const road of innerRoads) {
+      for (const pt of road.points) {
+        const dist = Math.sqrt(pt.x ** 2 + pt.z ** 2);
+        expect(dist).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('ring road generation is deterministic', () => {
+    const services = [
+      makeService('s1', 'Auth', 2),
+      makeService('s2', 'Health', 1),
+      makeService('s3', 'Users', 1),
+    ];
+    const endpoints = [
+      makeEndpoint('e1', 's1', '/login', 'post', 0, true),
+      makeEndpoint('e2', 's1', '/refresh', 'post', 0, true),
+      makeEndpoint('e3', 's2', '/health', 'get', 0, false),
+      makeEndpoint('e4', 's3', '/users', 'get', 0, false),
+    ];
+    const r1 = computeCityLayout(services, endpoints);
+    const r2 = computeCityLayout(services, endpoints);
+    expect(r1.ringRoads).toEqual(r2.ringRoads);
+  });
+});
+
+describe('computeCityLayout — sector boulevards', () => {
+  it('returns boulevards array in layout', () => {
+    const services = [makeService('s1', 'Health', 1)];
+    const endpoints = [makeEndpoint('e1', 's1', '/health', 'get')];
+    const result = computeCityLayout(services, endpoints);
+    expect(result.boulevards).toBeDefined();
+    expect(Array.isArray(result.boulevards)).toBe(true);
+  });
+
+  it('generates spokes connecting ring to center', () => {
+    const services = [
+      makeService('s1', 'Auth', 1),
+      makeService('s2', 'Users', 1),
+      makeService('s3', 'Health', 1),
+    ];
+    const endpoints = [
+      makeEndpoint('e1', 's1', '/login', 'post', 0, true),
+      makeEndpoint('e2', 's2', '/users', 'get', 0, true),
+      makeEndpoint('e3', 's3', '/health', 'get', 0, false),
+    ];
+    const result = computeCityLayout(services, endpoints);
+    const spokes = result.boulevards.filter((b) => b.zone === 'spoke');
+    expect(spokes.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('spoke count follows formula max(3, ceil(districtCount / 3))', () => {
+    // 12 services all auth → 12 districts → ceil(12/3) = 4 spokes
+    const services = Array.from({ length: 12 }, (_, i) =>
+      makeService(`s${i}`, `Svc${String(i).padStart(2, '0')}`, 1)
+    );
+    const endpoints = services.map((s, i) => makeEndpoint(`e${i}`, s.id, `/path`, 'get', 0, true));
+    const result = computeCityLayout(services, endpoints);
+    const spokes = result.boulevards.filter((b) => b.zone === 'spoke');
+    expect(spokes.length).toBe(4);
+  });
+
+  it('each spoke starts near center and ends at ring radius', () => {
+    const services = [makeService('s1', 'Auth', 1), makeService('s2', 'Users', 1)];
+    const endpoints = [
+      makeEndpoint('e1', 's1', '/login', 'post', 0, true),
+      makeEndpoint('e2', 's2', '/users', 'get', 0, false),
+    ];
+    const result = computeCityLayout(services, endpoints);
+    for (const spoke of result.boulevards) {
+      const first = spoke.points[0]!;
+      const firstDist = Math.sqrt(first.x ** 2 + first.z ** 2);
+      expect(firstDist).toBeLessThan(2);
+
+      const last = spoke.points[spoke.points.length - 1]!;
+      const lastDist = Math.sqrt(last.x ** 2 + last.z ** 2);
+      expect(lastDist).toBeGreaterThan(firstDist);
+    }
+  });
+
+  it('boulevard generation is deterministic', () => {
+    const services = [makeService('s1', 'Auth', 1), makeService('s2', 'Health', 1)];
+    const endpoints = [
+      makeEndpoint('e1', 's1', '/login', 'post', 0, true),
+      makeEndpoint('e2', 's2', '/health', 'get', 0, false),
+    ];
+    const r1 = computeCityLayout(services, endpoints);
+    const r2 = computeCityLayout(services, endpoints);
+    expect(r1.boulevards).toEqual(r2.boulevards);
   });
 });

@@ -1,4 +1,5 @@
 import { useWorldStore } from '../stores/world.store';
+import { useViewStore } from '../stores/view.store';
 import { METHOD_COLORS, METHOD_LABELS, LINK_STATE_COLORS } from '../utils/colors';
 import type { HttpMethod } from '../types/world';
 import type { LinkState } from '../types/semantic';
@@ -12,11 +13,37 @@ const LEGEND_LINK_STATES: { state: LinkState; label: string }[] = [
   { state: 'unknown', label: 'Unknown' },
 ];
 
+const HUD_THEME = {
+  dark: {
+    text: '#a8b4d6',
+    muted: '#6f7ca3',
+    divider: '#2a3553',
+    panelBg: 'rgba(8, 12, 28, 0.38)',
+    panelBorder: 'rgba(61, 83, 130, 0.45)',
+    buttonBg: 'rgba(12, 20, 42, 0.78)',
+    buttonBorder: '#2f4670',
+    buttonText: '#d8e6ff',
+  },
+  light: {
+    text: '#2f3f63',
+    muted: '#55648c',
+    divider: '#b9c7e7',
+    panelBg: 'rgba(247, 250, 255, 0.82)',
+    panelBorder: 'rgba(124, 147, 197, 0.55)',
+    buttonBg: 'rgba(255, 255, 255, 0.94)',
+    buttonBorder: '#9fb3df',
+    buttonText: '#1f2f52',
+  },
+} as const;
+
 export function HUD(): React.JSX.Element {
   const loading = useWorldStore((s) => s.loading);
   const connected = useWorldStore((s) => s.connected);
   const error = useWorldStore((s) => s.error);
   const endpoints = useWorldStore((s) => s.endpoints);
+  const visualMode = useViewStore((s) => s.visualMode);
+  const toggleVisualMode = useViewStore((s) => s.toggleVisualMode);
+  const theme = HUD_THEME[visualMode];
 
   return (
     <div
@@ -29,106 +56,162 @@ export function HUD(): React.JSX.Element {
         userSelect: 'none',
       }}
     >
-      {/* Connection / loading status */}
-      {!connected && (
-        <div style={{ color: '#ff6b6b', fontSize: '14px', marginBottom: '8px' }}>
-          ● Disconnected
-        </div>
-      )}
-      {connected && loading && endpoints.length === 0 && (
-        <div style={{ color: '#ffd700', fontSize: '14px', marginBottom: '8px' }}>
-          ● Loading world…
-        </div>
-      )}
-      {connected && !loading && endpoints.length > 0 && (
-        <div style={{ color: '#50c878', fontSize: '14px', marginBottom: '8px' }}>
-          ● Connected ({endpoints.length} endpoints)
-        </div>
-      )}
-      {error && (
-        <div style={{ color: '#ff6b6b', fontSize: '12px', marginBottom: '8px' }}>{error}</div>
-      )}
-
-      {/* Method color legend */}
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '4px',
-          marginTop: '12px',
-        }}
-      >
-        {LEGEND_METHODS.map((method) => (
-          <div
-            key={method}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              fontSize: '11px',
-              color: '#aaa',
-            }}
-          >
-            <div
-              style={{
-                width: '12px',
-                height: '12px',
-                borderRadius: '2px',
-                backgroundColor: METHOD_COLORS[method],
-                flexShrink: 0,
-              }}
-            />
-            {METHOD_LABELS[method]}
-          </div>
-        ))}
+      <div style={{ marginBottom: '12px', pointerEvents: 'auto' }}>
+        <button
+          type="button"
+          onClick={toggleVisualMode}
+          style={{
+            border: `1px solid ${theme.buttonBorder}`,
+            backgroundColor: theme.buttonBg,
+            color: theme.buttonText,
+            borderRadius: '999px',
+            padding: '6px 10px',
+            fontSize: '11px',
+            fontWeight: 600,
+            letterSpacing: '0.3px',
+            cursor: 'pointer',
+            boxShadow:
+              visualMode === 'dark'
+                ? '0 0 12px rgba(0, 165, 255, 0.22)'
+                : '0 1px 10px rgba(95, 116, 168, 0.15)',
+          }}
+          aria-label="Toggle visual mode"
+        >
+          Theme: {visualMode === 'dark' ? 'Dark' : 'Light'}
+        </button>
       </div>
 
-      {/* Link state legend */}
       <div
         style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '4px',
-          marginTop: '16px',
-          borderTop: '1px solid #333',
-          paddingTop: '12px',
+          backgroundColor: theme.panelBg,
+          border: `1px solid ${theme.panelBorder}`,
+          borderRadius: '10px',
+          padding: '10px 12px',
+          maxWidth: '220px',
         }}
       >
+        {/* Connection / loading status */}
+        {!connected && (
+          <div style={{ color: '#ff6b6b', fontSize: '14px', marginBottom: '8px' }}>
+            ● Disconnected
+          </div>
+        )}
+        {connected && loading && endpoints.length === 0 && (
+          <div style={{ color: '#ffd700', fontSize: '14px', marginBottom: '8px' }}>
+            ● Loading world…
+          </div>
+        )}
+        {connected && !loading && endpoints.length > 0 && (
+          <div style={{ color: '#50c878', fontSize: '14px', marginBottom: '8px' }}>
+            ● Connected ({endpoints.length} endpoints)
+          </div>
+        )}
+        {error && (
+          <div style={{ color: '#ff6b6b', fontSize: '12px', marginBottom: '8px' }}>{error}</div>
+        )}
+
+        {/* Method color legend */}
         <div
           style={{
-            fontSize: '10px',
-            color: '#666',
-            textTransform: 'uppercase',
-            letterSpacing: '0.5px',
-            marginBottom: '4px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '4px',
+            marginTop: '12px',
           }}
         >
-          Link State
+          {LEGEND_METHODS.map((method) => (
+            <div
+              key={method}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontSize: '11px',
+                color: theme.text,
+              }}
+            >
+              <div
+                style={{
+                  width: '12px',
+                  height: '12px',
+                  borderRadius: '2px',
+                  backgroundColor: METHOD_COLORS[method],
+                  flexShrink: 0,
+                }}
+              />
+              {METHOD_LABELS[method]}
+            </div>
+          ))}
         </div>
-        {LEGEND_LINK_STATES.map(({ state, label }) => (
+
+        {/* Link state legend */}
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '4px',
+            marginTop: '16px',
+            borderTop: `1px solid ${theme.divider}`,
+            paddingTop: '12px',
+          }}
+        >
           <div
-            key={state}
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              fontSize: '11px',
-              color: '#aaa',
+              fontSize: '10px',
+              color: theme.muted,
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+              marginBottom: '4px',
             }}
           >
-            <div
-              style={{
-                width: '12px',
-                height: '12px',
-                borderRadius: '50%',
-                backgroundColor: LINK_STATE_COLORS[state].hex,
-                opacity: LINK_STATE_COLORS[state].opacity,
-                flexShrink: 0,
-              }}
-            />
-            {label}
+            Link State
           </div>
-        ))}
+          {LEGEND_LINK_STATES.map(({ state, label }) => (
+            <div
+              key={state}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontSize: '11px',
+                color: theme.text,
+              }}
+            >
+              <div
+                style={{
+                  width: '12px',
+                  height: '12px',
+                  borderRadius: '50%',
+                  backgroundColor: LINK_STATE_COLORS[state].hex,
+                  opacity: LINK_STATE_COLORS[state].opacity,
+                  flexShrink: 0,
+                }}
+              />
+              {label}
+            </div>
+          ))}
+        </div>
+
+        {/* Routing hint legend */}
+        <div
+          style={{
+            marginTop: '14px',
+            borderTop: `1px solid ${theme.divider}`,
+            paddingTop: '10px',
+            fontSize: '10px',
+            color: theme.muted,
+            maxWidth: '210px',
+            lineHeight: 1.4,
+          }}
+        >
+          <div style={{ textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
+            Routing
+          </div>
+          <div>Lines passing through the center gate are auth-gated routes.</div>
+          <div style={{ marginTop: '4px' }}>
+            Link colors are driven by live telemetry simulation.
+          </div>
+        </div>
       </div>
     </div>
   );
