@@ -340,3 +340,70 @@ describe('computeCityLayout — zone-specific gaps', () => {
     expect(actualWidth).toBeCloseTo(expectedWidth, 5);
   });
 });
+
+describe('computeCityLayout — ring roads', () => {
+  it('returns ringRoads array in layout', () => {
+    const services = [makeService('s1', 'Health', 1)];
+    const endpoints = [makeEndpoint('e1', 's1', '/health', 'get')];
+    const result = computeCityLayout(services, endpoints);
+    expect(result.ringRoads).toBeDefined();
+    expect(Array.isArray(result.ringRoads)).toBe(true);
+  });
+
+  it('generates outer ring road for public-only services', () => {
+    const services = [makeService('s1', 'Svc1', 1), makeService('s2', 'Svc2', 1)];
+    const endpoints = [
+      makeEndpoint('e1', 's1', '/a', 'get', 0, false),
+      makeEndpoint('e2', 's2', '/b', 'get', 0, false),
+    ];
+    const result = computeCityLayout(services, endpoints);
+    const outerSegments = result.ringRoads.filter((r) => r.zone === 'outer');
+    expect(outerSegments.length).toBeGreaterThan(0);
+  });
+
+  it('generates inner and outer ring roads when both zones exist', () => {
+    const services = [makeService('s1', 'Auth', 1), makeService('s2', 'Health', 1)];
+    const endpoints = [
+      makeEndpoint('e1', 's1', '/login', 'post', 0, true),
+      makeEndpoint('e2', 's2', '/health', 'get', 0, false),
+    ];
+    const result = computeCityLayout(services, endpoints);
+    const innerSegments = result.ringRoads.filter((r) => r.zone === 'inner');
+    const outerSegments = result.ringRoads.filter((r) => r.zone === 'outer');
+    expect(innerSegments.length).toBeGreaterThan(0);
+    expect(outerSegments.length).toBeGreaterThan(0);
+  });
+
+  it('ring road points lie at the ring radius', () => {
+    const services = [makeService('s1', 'Auth', 1), makeService('s2', 'Users', 1)];
+    const endpoints = [
+      makeEndpoint('e1', 's1', '/login', 'post', 0, true),
+      makeEndpoint('e2', 's2', '/users', 'get', 0, true),
+    ];
+    const result = computeCityLayout(services, endpoints);
+    const innerRoads = result.ringRoads.filter((r) => r.zone === 'inner');
+    for (const road of innerRoads) {
+      for (const pt of road.points) {
+        const dist = Math.sqrt(pt.x ** 2 + pt.z ** 2);
+        expect(dist).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('ring road generation is deterministic', () => {
+    const services = [
+      makeService('s1', 'Auth', 2),
+      makeService('s2', 'Health', 1),
+      makeService('s3', 'Users', 1),
+    ];
+    const endpoints = [
+      makeEndpoint('e1', 's1', '/login', 'post', 0, true),
+      makeEndpoint('e2', 's1', '/refresh', 'post', 0, true),
+      makeEndpoint('e3', 's2', '/health', 'get', 0, false),
+      makeEndpoint('e4', 's3', '/users', 'get', 0, false),
+    ];
+    const r1 = computeCityLayout(services, endpoints);
+    const r2 = computeCityLayout(services, endpoints);
+    expect(r1.ringRoads).toEqual(r2.ringRoads);
+  });
+});

@@ -2,11 +2,14 @@ import type { WorldService, WorldEndpoint } from '../types/world';
 import {
   BUILDING_BASE_SIZE,
   DISTRICT_GAP,
+  GROUND_Y,
   MIN_HEIGHT,
   MAX_HEIGHT,
   MIN_INNER_RADIUS,
   MIN_OUTER_RADIUS,
   RING_GAP,
+  RING_ROAD_ARC_SEGMENTS,
+  ROAD_WIDTH,
   ZONE_LAYOUT_CONFIG,
 } from '../utils/constants';
 
@@ -32,10 +35,18 @@ export interface DistrictLayout {
   bounds: { minX: number; maxX: number; minZ: number; maxZ: number };
 }
 
+export interface RoadSegment {
+  points: Position3D[];
+  width: number;
+  zone: 'inner' | 'outer' | 'spoke';
+}
+
 export interface CityLayout {
   buildings: BuildingLayout[];
   districts: DistrictLayout[];
   gatePosition: Position3D;
+  ringRoads: RoadSegment[];
+  boulevards: RoadSegment[];
 }
 
 type ServiceZone = 'public-perimeter' | 'protected-core';
@@ -77,6 +88,19 @@ function computeRingRadius(
   return Math.max(minRadius, computed);
 }
 
+function generateRingRoad(radius: number, zone: 'inner' | 'outer'): RoadSegment {
+  const points: Position3D[] = [];
+  for (let i = 0; i <= RING_ROAD_ARC_SEGMENTS; i++) {
+    const angle = (i / RING_ROAD_ARC_SEGMENTS) * 2 * Math.PI;
+    points.push({
+      x: radius * Math.cos(angle),
+      y: GROUND_Y + 0.005,
+      z: radius * Math.sin(angle),
+    });
+  }
+  return { points, width: ROAD_WIDTH, zone };
+}
+
 /**
  * Compute deterministic radial zone layout for the city.
  *
@@ -96,7 +120,7 @@ export function computeCityLayout(
   const gatePosition: Position3D = { x: 0, y: 0, z: 0 };
 
   if (services.length === 0 || endpoints.length === 0) {
-    return { buildings: [], districts: [], gatePosition };
+    return { buildings: [], districts: [], gatePosition, ringRoads: [], boulevards: [] };
   }
 
   const sortedServices = [...services].sort((a, b) => a.tag.localeCompare(b.tag));
@@ -212,5 +236,13 @@ export function computeCityLayout(
   placeRing(innerServices, innerSizes, innerRadius, 'protected-core');
   placeRing(outerServices, outerSizes, outerRadius, 'public-perimeter');
 
-  return { buildings, districts, gatePosition };
+  const ringRoads: RoadSegment[] = [];
+  if (innerServices.length > 0) {
+    ringRoads.push(generateRingRoad(innerRadius, 'inner'));
+  }
+  if (outerServices.length > 0) {
+    ringRoads.push(generateRingRoad(outerRadius, 'outer'));
+  }
+
+  return { buildings, districts, gatePosition, ringRoads, boulevards: [] };
 }
