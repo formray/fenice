@@ -1,6 +1,6 @@
 import { Text, Line } from '@react-three/drei';
 import type { DistrictLayout } from '../services/layout.service';
-import { GROUND_Y } from '../utils/constants';
+import { GROUND_Y, ZONE_LAYOUT_CONFIG } from '../utils/constants';
 import { ZONE_STYLES } from '../utils/colors';
 
 interface DistrictProps {
@@ -21,6 +21,49 @@ export function District({ layout }: DistrictProps): React.JSX.Element {
     [layout.bounds.minX, GROUND_Y + 0.01, layout.bounds.minZ],
   ];
 
+  // Corner accent marks for protected-core districts
+  const ACCENT_LENGTH = 0.6;
+  const accentY = GROUND_Y + 0.02;
+
+  const cornerAccents: [number, number, number][][] = [
+    // Top-left
+    [
+      [layout.bounds.minX, accentY, layout.bounds.minZ],
+      [layout.bounds.minX + ACCENT_LENGTH, accentY, layout.bounds.minZ],
+    ],
+    [
+      [layout.bounds.minX, accentY, layout.bounds.minZ],
+      [layout.bounds.minX, accentY, layout.bounds.minZ + ACCENT_LENGTH],
+    ],
+    // Top-right
+    [
+      [layout.bounds.maxX, accentY, layout.bounds.minZ],
+      [layout.bounds.maxX - ACCENT_LENGTH, accentY, layout.bounds.minZ],
+    ],
+    [
+      [layout.bounds.maxX, accentY, layout.bounds.minZ],
+      [layout.bounds.maxX, accentY, layout.bounds.minZ + ACCENT_LENGTH],
+    ],
+    // Bottom-left
+    [
+      [layout.bounds.minX, accentY, layout.bounds.maxZ],
+      [layout.bounds.minX + ACCENT_LENGTH, accentY, layout.bounds.maxZ],
+    ],
+    [
+      [layout.bounds.minX, accentY, layout.bounds.maxZ],
+      [layout.bounds.minX, accentY, layout.bounds.maxZ - ACCENT_LENGTH],
+    ],
+    // Bottom-right
+    [
+      [layout.bounds.maxX, accentY, layout.bounds.maxZ],
+      [layout.bounds.maxX - ACCENT_LENGTH, accentY, layout.bounds.maxZ],
+    ],
+    [
+      [layout.bounds.maxX, accentY, layout.bounds.maxZ],
+      [layout.bounds.maxX, accentY, layout.bounds.maxZ - ACCENT_LENGTH],
+    ],
+  ];
+
   return (
     <group>
       {/* Ground plane */}
@@ -29,20 +72,32 @@ export function District({ layout }: DistrictProps): React.JSX.Element {
         <meshStandardMaterial
           color={zoneStyle.floorColor}
           transparent
-          opacity={0.6}
+          opacity={ZONE_LAYOUT_CONFIG[layout.zone].groundOpacity}
           roughness={0.9}
         />
       </mesh>
 
-      {/* Zone border (protected-core only) */}
+      {/* Zone border + corner accents (protected-core only) */}
       {zoneStyle.borderColor && (
-        <Line
-          points={borderPoints}
-          color={zoneStyle.borderColor}
-          lineWidth={1}
-          opacity={0.3}
-          transparent
-        />
+        <>
+          <Line
+            points={borderPoints}
+            color={zoneStyle.borderColor}
+            lineWidth={1}
+            opacity={0.3}
+            transparent
+          />
+          {cornerAccents.map((pts, idx) => (
+            <Line
+              key={`accent-${idx}`}
+              points={pts}
+              color={zoneStyle.borderColor!}
+              lineWidth={2}
+              opacity={0.6}
+              transparent
+            />
+          ))}
+        </>
       )}
 
       {/* Service tag label */}
