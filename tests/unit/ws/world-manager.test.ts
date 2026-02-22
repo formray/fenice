@@ -53,6 +53,40 @@ describe('WorldWsManager', () => {
     it('should return undefined for unknown connection', () => {
       expect(manager.getConnection('unknown')).toBeUndefined();
     });
+
+    it('should close previous connection when replacing same user', () => {
+      const oldWs = createMockWs();
+      const newWs = createMockWs();
+
+      manager.addConnection('user1', oldWs);
+      manager.addConnection('user1', newWs);
+
+      expect(oldWs.close).toHaveBeenCalledOnce();
+      expect(manager.getConnection('user1')).toBe(newWs);
+    });
+
+    it('should not remove newer connection when stale socket closes', () => {
+      const oldWs = createMockWs();
+      const newWs = createMockWs();
+
+      manager.addConnection('user1', oldWs);
+      manager.addConnection('user1', newWs);
+
+      manager.removeConnection('user1', oldWs);
+
+      expect(manager.isConnected('user1')).toBe(true);
+      expect(manager.getConnection('user1')).toBe(newWs);
+    });
+
+    it('should report whether connection is current', () => {
+      const ws = createMockWs();
+      const otherWs = createMockWs();
+
+      manager.addConnection('user1', ws);
+
+      expect(manager.isCurrentConnection('user1', ws)).toBe(true);
+      expect(manager.isCurrentConnection('user1', otherWs)).toBe(false);
+    });
   });
 
   describe('seq', () => {

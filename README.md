@@ -22,6 +22,7 @@ FENICE (Italian for "phoenix") is a backend starter platform built on the **2026
 - **MCP Server Endpoint** -- Model Context Protocol discovery for AI agent integration
 - **Scalar Interactive Docs** -- Beautiful API documentation UI at `/docs`
 - **LLM-Readable Docs** -- Markdown API reference optimized for AI consumption at `/docs/llm`
+- **FENICE 3D World (M1)** -- React + R3F static city generated from live OpenAPI
 - **OpenTelemetry** -- Auto-instrumented distributed tracing
 - **Pino Structured Logging** -- JSON logging with request correlation
 - **Adapter Pattern** -- Vendor-independent abstractions for email (Resend), storage (GCS), messaging (FCM)
@@ -64,6 +65,7 @@ See [QUICKSTART.md](QUICKSTART.md) for a detailed walkthrough.
 | PATCH  | `/api/v1/users/:id`         | Yes  | Update user profile               |
 | DELETE | `/api/v1/users/:id`         | Yes  | Delete user (admin only)          |
 | GET    | `/api/v1/mcp`               | No   | MCP discovery manifest            |
+| GET    | `/api/v1/world-ws`          | Yes  | WebSocket world stream (3D client)|
 | GET    | `/openapi`                  | No   | OpenAPI 3.1 JSON specification    |
 | GET    | `/docs`                     | No   | Scalar interactive API docs       |
 | GET    | `/docs/llm`                 | No   | LLM-readable Markdown docs        |
@@ -105,6 +107,9 @@ src/
   middleware/            # Auth, error handling, logging, request ID
   adapters/             # Email, storage, messaging abstractions
   utils/                # Errors, logger, LLM docs generator
+client/
+  src/                  # React + R3F 3D world client (M1)
+docs/3d-world/          # 3D world plans, ADRs, boards, and execution docs
 tests/
   unit/                 # Unit tests (schemas, config, errors, adapters)
   integration/          # Integration tests (health, auth, docs, MCP)
@@ -134,9 +139,16 @@ npm run start            # Production server
 
 # Shell scripts
 ./setup.sh               # First-time setup
-./dev.sh                 # Start MongoDB + dev server
+./dev.sh                 # Start MongoDB + backend + 3D client
 ./stop.sh                # Stop Docker services
 ./reset.sh               # Full clean and reinstall
+
+# Client (from client/)
+npm run dev              # Vite dev server (3D client)
+npm run lint             # Client ESLint
+npm run typecheck        # Client TypeScript checks
+npm run test             # Client Vitest
+npm run build            # Client production build
 ```
 
 ## Documentation
@@ -150,6 +162,7 @@ npm run start            # Production server
 | [CHANGELOG.md](CHANGELOG.md)                   | Version history                  |
 | [ROADMAP.md](ROADMAP.md)                       | Future plans                     |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)   | Architecture decisions           |
+| [docs/3d-world/00_START_HERE.md](docs/3d-world/00_START_HERE.md) | 3D world execution entrypoint |
 
 ## Contributing
 

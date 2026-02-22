@@ -25,8 +25,9 @@ cd fenice
 
 This will:
 - Verify Node.js 22+ and Docker are installed
-- Install all dependencies via `npm ci`
+- Install backend and client dependencies via `npm ci`
 - Create `.env` from `.env.example` (if not present)
+- Create `client/.env` from `client/.env.example` (if not present)
 
 ### 3. Start Development
 
@@ -37,7 +38,8 @@ This will:
 This will:
 - Start MongoDB 7 via Docker Compose
 - Wait for MongoDB to be ready
-- Start the FENICE dev server with hot reload on port 3000
+- Start the FENICE backend server on port 3000
+- Start the 3D client on port 5173
 
 ### 4. Explore the API
 
@@ -45,6 +47,7 @@ Open your browser:
 
 | URL                                | What You'll See                          |
 | ---------------------------------- | ---------------------------------------- |
+| http://localhost:5173              | FENICE 3D World client (M1 static city) |
 | http://localhost:3000/docs          | Scalar interactive API documentation     |
 | http://localhost:3000/docs/llm      | LLM-readable Markdown documentation      |
 | http://localhost:3000/openapi       | Raw OpenAPI 3.1 JSON specification       |
@@ -80,6 +83,13 @@ Use the `accessToken` from the response to access protected endpoints:
 curl http://localhost:3000/api/v1/users/me \
   -H "Authorization: Bearer <your-access-token>"
 ```
+
+Set the client world token:
+```bash
+echo "VITE_WS_TOKEN=<your-access-token>" > client/.env
+```
+
+Then refresh `http://localhost:5173` to connect the 3D world client to `GET /api/v1/world-ws`.
 
 ## Other Commands
 

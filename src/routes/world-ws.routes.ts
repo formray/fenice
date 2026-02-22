@@ -105,6 +105,7 @@ export function createWorldWsRouter(
       const userId = payload.userId;
       const mgr = getWorldWsManager();
       const projection = getProjectionService();
+      let connection: WsConnection | null = null;
 
       const fetchSpec = async (): Promise<WorldModel> => {
         const res = await appRef.request('/openapi');
@@ -114,19 +115,24 @@ export function createWorldWsRouter(
 
       return {
         onOpen(_evt: Event, ws: WSContext<WebSocket>): void {
-          mgr.addConnection(userId, toWsConnection(ws));
+          connection = toWsConnection(ws);
+          mgr.addConnection(userId, connection);
         },
         onMessage(evt: MessageEvent<WSMessageReceive>): void {
+          if (!connection || !mgr.isCurrentConnection(userId, connection)) {
+            return;
+          }
+
           const raw = extractRawMessage(evt.data);
           if (raw) {
             void handleWorldMessage(mgr, projection, userId, raw, fetchSpec);
           }
         },
         onClose(): void {
-          mgr.removeConnection(userId);
+          mgr.removeConnection(userId, connection ?? undefined);
         },
         onError(): void {
-          mgr.removeConnection(userId);
+          mgr.removeConnection(userId, connection ?? undefined);
         },
       };
     })

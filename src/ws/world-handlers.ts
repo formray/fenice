@@ -76,9 +76,10 @@ async function handleSubscribe(
   // Try resume flow
   if (resume) {
     const tokenData = decodeResumeToken(resume.resumeToken);
+    const ageMs = tokenData ? Date.now() - tokenData.ts : Number.POSITIVE_INFINITY;
 
-    // Validate: userId match, TTL check
-    if (tokenData?.userId === userId && Date.now() - tokenData.ts <= manager.getResumeTtlMs()) {
+    // Validate: userId match, non-future timestamp, TTL check
+    if (tokenData?.userId === userId && ageMs >= 0 && ageMs <= manager.getResumeTtlMs()) {
       const buffered = manager.getBufferedMessagesFrom(resume.lastSeq + 1);
       if (buffered !== null) {
         // Resume success

@@ -210,6 +210,19 @@ mcpRouter.get('/mcp', async (c) => {
           required: ['token'],
         },
       },
+      {
+        name: 'world_ws_connect',
+        description: 'Connect to World WebSocket endpoint for 3D city snapshot/resume stream',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            token: { type: 'string', description: 'JWT access token for authentication' },
+            resumeToken: { type: 'string', description: 'Optional token for stream resume' },
+            lastSeq: { type: 'number', minimum: 0, description: 'Optional last applied sequence' },
+          },
+          required: ['token'],
+        },
+      },
     ],
     resources: [
       {
@@ -226,7 +239,7 @@ mcpRouter.get('/mcp', async (c) => {
       },
     ],
     instructions:
-      'FENICE is an AI-native REST API. Use the tools above to interact with authentication, user management, file uploads, and real-time WebSocket messaging. All tool calls map to REST endpoints. Authentication required for most operations — obtain tokens via auth_login first. WebSocket connections require a valid JWT token.',
+      'FENICE is an AI-native REST API. Use the tools above to interact with authentication, user management, file uploads, world projection, and real-time WebSocket messaging. All tool calls map to REST endpoints. Authentication required for most operations — obtain tokens via auth_login first. WebSocket connections require a valid JWT token.',
   });
 });
 

@@ -68,10 +68,23 @@ export class WorldWsManager {
   // ── Connections ──
 
   addConnection(userId: string, ws: WsConnection): void {
+    // Keep one active world connection per user; close stale socket if replaced.
+    const existing = this.connections.get(userId);
+    if (existing && existing.ws !== ws && existing.ws.readyState === WS_OPEN) {
+      existing.ws.close();
+    }
     this.connections.set(userId, { ws, subscribed: false });
   }
 
-  removeConnection(userId: string): void {
+  removeConnection(userId: string, expectedWs?: WsConnection): void {
+    const conn = this.connections.get(userId);
+    if (!conn) return;
+
+    // Ignore stale close/error callbacks from an old socket.
+    if (expectedWs && conn.ws !== expectedWs) {
+      return;
+    }
+
     this.connections.delete(userId);
   }
 
@@ -83,11 +96,15 @@ export class WorldWsManager {
     return this.connections.get(userId)?.ws;
   }
 
-  markSubscribed(userId: string): void {
+  isCurrentConnection(userId: string, ws: WsConnection): boolean {
+    return this.connections.get(userId)?.ws === ws;
+  }
+
+  markSubscribed(userId: string, expectedWs?: WsConnection): void {
     const conn = this.connections.get(userId);
-    if (conn) {
-      conn.subscribed = true;
-    }
+    if (!conn) return;
+    if (expectedWs && conn.ws !== expectedWs) return;
+    conn.subscribed = true;
   }
 
   // ── World model ──

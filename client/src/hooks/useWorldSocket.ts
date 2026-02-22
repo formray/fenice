@@ -5,12 +5,17 @@ import type { WorldClientMessage, WorldServerMessage } from '../types/world-ws';
 const WS_RECONNECT_DELAY_MS = 3_000;
 const WS_PING_INTERVAL_MS = 25_000;
 
+function hasMessageType(data: unknown): data is { type: string } {
+  return typeof data === 'object' && data !== null && 'type' in data;
+}
+
 export function useWorldSocket(token: string): void {
   const wsRef = useRef<WebSocket | null>(null);
   const pingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const resumeTokenRef = useRef<string | null>(null);
   const lastSeqRef = useRef<number>(0);
+  const disposedRef = useRef(false);
 
   const setWorldModel = useWorldStore((s) => s.setWorldModel);
   const setConnected = useWorldStore((s) => s.setConnected);
@@ -18,7 +23,12 @@ export function useWorldSocket(token: string): void {
   const setError = useWorldStore((s) => s.setError);
 
   const connect = useCallback(() => {
-    if (!token) return;
+    if (disposedRef.current) return;
+    if (!token) {
+      setError('Missing VITE_WS_TOKEN');
+      setLoading(false);
+      return;
+    }
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${window.location.host}/api/v1/world-ws?token=${encodeURIComponent(token)}`;
@@ -26,6 +36,11 @@ export function useWorldSocket(token: string): void {
     wsRef.current = ws;
 
     ws.onopen = () => {
+      if (disposedRef.current || wsRef.current !== ws) {
+        ws.close();
+        return;
+      }
+
       setConnected(true);
       // Only show loading spinner on first connection (no data yet)
       const hasData = useWorldStore.getState().endpoints.length > 0;
@@ -43,6 +58,9 @@ export function useWorldSocket(token: string): void {
 
       ws.send(JSON.stringify(msg));
 
+      if (pingIntervalRef.current) {
+        clearInterval(pingIntervalRef.current);
+      }
       pingIntervalRef.current = setInterval(() => {
         if (ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({ type: 'world.ping' } satisfies WorldClientMessage));
@@ -51,7 +69,22 @@ export function useWorldSocket(token: string): void {
     };
 
     ws.onmessage = (event) => {
-      const data = JSON.parse(event.data as string) as WorldServerMessage;
+      if (disposedRef.current || wsRef.current !== ws) return;
+
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(event.data as string);
+      } catch {
+        setError('Invalid WebSocket payload');
+        return;
+      }
+
+      if (!hasMessageType(parsed)) {
+        setError('Malformed WebSocket message');
+        return;
+      }
+
+      const data = parsed as WorldServerMessage;
 
       switch (data.type) {
         case 'world.subscribed':
@@ -77,26 +110,57 @@ export function useWorldSocket(token: string): void {
         case 'world.pong':
           // Keepalive acknowledged
           break;
+
+        default:
+          setError('Unsupported WebSocket message');
+          break;
       }
     };
 
     ws.onclose = () => {
+      const isCurrentSocket = wsRef.current === ws;
+      if (!isCurrentSocket) return;
+
+      wsRef.current = null;
       setConnected(false);
-      if (pingIntervalRef.current) clearInterval(pingIntervalRef.current);
-      reconnectTimeoutRef.current = setTimeout(connect, WS_RECONNECT_DELAY_MS);
+      if (pingIntervalRef.current) {
+        clearInterval(pingIntervalRef.current);
+        pingIntervalRef.current = null;
+      }
+
+      if (!disposedRef.current) {
+        reconnectTimeoutRef.current = setTimeout(() => {
+          reconnectTimeoutRef.current = null;
+          connect();
+        }, WS_RECONNECT_DELAY_MS);
+      }
     };
 
     ws.onerror = () => {
+      if (disposedRef.current || wsRef.current !== ws) return;
       setError('WebSocket connection error');
     };
   }, [token, setWorldModel, setConnected, setLoading, setError]);
 
   useEffect(() => {
+    disposedRef.current = false;
     connect();
+
     return () => {
-      wsRef.current?.close();
-      if (pingIntervalRef.current) clearInterval(pingIntervalRef.current);
-      if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+      disposedRef.current = true;
+
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
+      if (pingIntervalRef.current) {
+        clearInterval(pingIntervalRef.current);
+        pingIntervalRef.current = null;
+      }
+
+      const socket = wsRef.current;
+      wsRef.current = null;
+      socket?.close();
     };
   }, [connect]);
 }

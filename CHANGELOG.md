@@ -31,6 +31,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Client unit tests for layout service, Zustand store, and color mappings (24 new tests)
 - WS protocol contract tests validating producer/consumer message schemas (31 tests)
 - Demo dry run e2e tests verifying M1 acceptance criteria: 100% endpoint mapping, zero crashes, performance under 1.2s, correct metadata, building non-overlap (23 tests)
+- 3D world docs index (`docs/3d-world/README.md`) and M2 realtime overlay execution plan
+
+### Fixed
+
+- World WS manager now ignores stale close/error callbacks and closes replaced sockets safely
+- World WS resume validation now rejects future timestamps in resume tokens
+- Client WS hook hardened against malformed messages and stale socket lifecycle race conditions
+- Setup/bootstrap docs updated for 3D client token flow (`client/.env.example`, Quickstart, root README)
 
 ## [0.3.0] - 2026-02-21
 

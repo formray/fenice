@@ -254,6 +254,36 @@ describe('handleWorldMessage', () => {
       const subscribed = JSON.parse(calls[0][0] as string);
       expect(subscribed.mode).toBe('snapshot');
     });
+
+    it('should fallback to snapshot when token timestamp is in the future', async () => {
+      const ws = createMockWs();
+      manager.addConnection('user1', ws);
+
+      projection.buildWorldModel({
+        openapi: '3.1.0',
+        info: { title: 'Test', version: '1.0.0' },
+        paths: { '/health': { get: { tags: ['Health'], summary: 'Health check' } } },
+      });
+
+      const { encodeResumeToken } = await import('../../../src/ws/world-manager.js');
+      const token = encodeResumeToken({
+        userId: 'user1',
+        lastSeq: 1,
+        ts: Date.now() + 60_000,
+      });
+
+      await handleWorldMessage(
+        manager,
+        projection,
+        'user1',
+        JSON.stringify({ type: 'world.subscribe', resume: { lastSeq: 1, resumeToken: token } }),
+        fetchSpec
+      );
+
+      const calls = (ws.send as ReturnType<typeof vi.fn>).mock.calls;
+      const subscribed = JSON.parse(calls[0][0] as string);
+      expect(subscribed.mode).toBe('snapshot');
+    });
   });
 
   describe('error handling', () => {

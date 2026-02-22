@@ -39,5 +39,14 @@ else
   success ".env already exists"
 fi
 
+# Copy client .env if not exists
+if [ ! -f client/.env ]; then
+  info "Creating client/.env from client/.env.example..."
+  cp client/.env.example client/.env
+  success "client/.env created — set VITE_WS_TOKEN after login"
+else
+  success "client/.env already exists"
+fi
+
 echo -e "\n${GREEN}✓ Setup complete!${NC}"
 echo -e "  Run ${BLUE}./dev.sh${NC} to start backend + client"
