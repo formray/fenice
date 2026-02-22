@@ -56,6 +56,10 @@ export const EnvSchema = z.object({
   // World WS
   WORLD_WS_BUFFER_SIZE: z.coerce.number().default(1000),
   WORLD_WS_RESUME_TTL_MS: z.coerce.number().default(300_000), // 5 minutes
+
+  // Delta Producer
+  DELTA_METRICS_INTERVAL_MS: z.coerce.number().default(5_000),
+  DELTA_DIFF_INTERVAL_MS: z.coerce.number().default(30_000),
 });
 
 export type Env = z.infer<typeof EnvSchema>;
