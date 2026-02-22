@@ -1,8 +1,34 @@
 import { useMemo } from 'react';
 import { useSelectionStore } from '../stores/selection.store';
 import { useWorldStore } from '../stores/world.store';
+import { useViewStore } from '../stores/view.store';
 import { METHOD_COLORS, METHOD_LABELS, LINK_STATE_COLORS } from '../utils/colors';
 import type { WorldEndpoint } from '../types/world';
+
+const PANEL_THEME = {
+  dark: {
+    bg: 'rgba(10, 10, 20, 0.95)',
+    border: '#2a2a3e',
+    text: '#e0e0e0',
+    muted: '#888',
+    subtle: '#bbb',
+    path: '#fff',
+    chipBg: 'rgba(255,255,255,0.05)',
+    chipBorder: '#2a2a3e',
+    close: '#888',
+  },
+  light: {
+    bg: 'rgba(245, 249, 255, 0.96)',
+    border: '#b8c8e8',
+    text: '#1f2f4f',
+    muted: '#4f6187',
+    subtle: '#2f436d',
+    path: '#102347',
+    chipBg: 'rgba(35,70,130,0.06)',
+    chipBorder: '#afc2e8',
+    close: '#5b6e98',
+  },
+} as const;
 
 export function SidePanel(): React.JSX.Element | null {
   const selectedId = useSelectionStore((s) => s.selectedId);
@@ -12,6 +38,8 @@ export function SidePanel(): React.JSX.Element | null {
   const edges = useWorldStore((s) => s.edges);
   const endpointSemantics = useWorldStore((s) => s.endpointSemantics);
   const endpointOverlays = useWorldStore((s) => s.endpointOverlays);
+  const visualMode = useViewStore((s) => s.visualMode);
+  const theme = PANEL_THEME[visualMode];
 
   const endpointMap = useMemo(() => new Map(endpoints.map((e) => [e.id, e])), [endpoints]);
 
@@ -55,11 +83,11 @@ export function SidePanel(): React.JSX.Element | null {
         right: 0,
         width: '340px',
         height: '100%',
-        backgroundColor: 'rgba(10, 10, 20, 0.95)',
-        borderLeft: '1px solid #2a2a3e',
+        backgroundColor: theme.bg,
+        borderLeft: `1px solid ${theme.border}`,
         padding: '20px',
         overflowY: 'auto',
-        color: '#e0e0e0',
+        color: theme.text,
         fontFamily: 'system-ui, -apple-system, sans-serif',
         fontSize: '14px',
         boxSizing: 'border-box',
@@ -74,7 +102,7 @@ export function SidePanel(): React.JSX.Element | null {
           right: '12px',
           background: 'none',
           border: 'none',
-          color: '#888',
+          color: theme.close,
           fontSize: '20px',
           cursor: 'pointer',
           padding: '4px 8px',
@@ -90,7 +118,7 @@ export function SidePanel(): React.JSX.Element | null {
         <div
           style={{
             fontSize: '12px',
-            color: '#888',
+            color: theme.muted,
             textTransform: 'uppercase',
             letterSpacing: '0.5px',
             marginBottom: '4px',
@@ -123,7 +151,7 @@ export function SidePanel(): React.JSX.Element | null {
         style={{
           fontFamily: 'ui-monospace, "SF Mono", "Cascadia Code", Menlo, monospace',
           fontSize: '15px',
-          color: '#fff',
+          color: theme.path,
           wordBreak: 'break-all',
           marginBottom: '16px',
           lineHeight: 1.4,
@@ -134,7 +162,7 @@ export function SidePanel(): React.JSX.Element | null {
 
       {/* Summary */}
       {endpoint.summary && (
-        <div style={{ marginBottom: '16px', color: '#bbb', lineHeight: 1.5 }}>
+        <div style={{ marginBottom: '16px', color: theme.subtle, lineHeight: 1.5 }}>
           {endpoint.summary}
         </div>
       )}
@@ -149,12 +177,12 @@ export function SidePanel(): React.JSX.Element | null {
           fontSize: '13px',
         }}
       >
-        <span style={{ color: '#888' }}>Auth required</span>
+        <span style={{ color: theme.muted }}>Auth required</span>
         <span style={{ color: endpoint.hasAuth ? '#ffd700' : '#50c878' }}>
           {endpoint.hasAuth ? 'Yes' : 'No'}
         </span>
 
-        <span style={{ color: '#888' }}>Parameters</span>
+        <span style={{ color: theme.muted }}>Parameters</span>
         <span>{endpoint.parameterCount}</span>
       </div>
 
@@ -164,7 +192,7 @@ export function SidePanel(): React.JSX.Element | null {
           <div
             style={{
               fontSize: '12px',
-              color: '#888',
+              color: theme.muted,
               textTransform: 'uppercase',
               letterSpacing: '0.5px',
               marginBottom: '8px',
@@ -180,7 +208,7 @@ export function SidePanel(): React.JSX.Element | null {
               fontSize: '13px',
             }}
           >
-            <span style={{ color: '#888' }}>Link state</span>
+            <span style={{ color: theme.muted }}>Link state</span>
             <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <span
                 style={{
@@ -196,28 +224,28 @@ export function SidePanel(): React.JSX.Element | null {
 
             {semantics.reason && (
               <>
-                <span style={{ color: '#888' }}>Reason</span>
+                <span style={{ color: theme.muted }}>Reason</span>
                 <span style={{ fontFamily: 'monospace', fontSize: '12px' }}>
                   {semantics.reason}
                 </span>
               </>
             )}
 
-            <span style={{ color: '#888' }}>Zone</span>
+            <span style={{ color: theme.muted }}>Zone</span>
             <span>{semantics.zone}</span>
 
             {overlay?.health && (
               <>
-                <span style={{ color: '#888' }}>Health</span>
+                <span style={{ color: theme.muted }}>Health</span>
                 <span>{overlay.health.status}</span>
               </>
             )}
 
             {overlay?.metrics && (
               <>
-                <span style={{ color: '#888' }}>p95</span>
+                <span style={{ color: theme.muted }}>p95</span>
                 <span>{overlay.metrics.p95.toFixed(0)}ms</span>
-                <span style={{ color: '#888' }}>Error rate</span>
+                <span style={{ color: theme.muted }}>Error rate</span>
                 <span>{(overlay.metrics.errorRate * 100).toFixed(1)}%</span>
               </>
             )}
@@ -231,7 +259,7 @@ export function SidePanel(): React.JSX.Element | null {
           <div
             style={{
               fontSize: '12px',
-              color: '#888',
+              color: theme.muted,
               textTransform: 'uppercase',
               letterSpacing: '0.5px',
               marginBottom: '8px',
@@ -245,13 +273,13 @@ export function SidePanel(): React.JSX.Element | null {
                 key={ep.id}
                 onClick={() => handleRelatedClick(ep.id)}
                 style={{
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid #2a2a3e',
+                  background: theme.chipBg,
+                  border: `1px solid ${theme.chipBorder}`,
                   borderRadius: '4px',
                   padding: '8px 10px',
                   cursor: 'pointer',
                   textAlign: 'left',
-                  color: '#ccc',
+                  color: theme.subtle,
                   fontFamily: 'ui-monospace, "SF Mono", "Cascadia Code", Menlo, monospace',
                   fontSize: '12px',
                   display: 'flex',

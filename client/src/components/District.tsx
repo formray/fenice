@@ -2,15 +2,28 @@ import { Html, Line } from '@react-three/drei';
 import type { DistrictLayout } from '../services/layout.service';
 import { GROUND_Y, ZONE_LAYOUT_CONFIG } from '../utils/constants';
 import { ZONE_STYLES } from '../utils/colors';
+import { useViewStore } from '../stores/view.store';
+
+const LIGHT_ZONE_FLOOR_COLORS = {
+  'public-perimeter': '#dce8ff',
+  'protected-core': '#d4e2ff',
+  'auth-hub': '#cad8f7',
+} as const;
 
 interface DistrictProps {
   layout: DistrictLayout;
 }
 
 export function District({ layout }: DistrictProps): React.JSX.Element {
+  const visualMode = useViewStore((s) => s.visualMode);
   const width = layout.bounds.maxX - layout.bounds.minX;
   const depth = layout.bounds.maxZ - layout.bounds.minZ;
   const zoneStyle = ZONE_STYLES[layout.zone];
+  const floorColor =
+    visualMode === 'light' ? LIGHT_ZONE_FLOOR_COLORS[layout.zone] : zoneStyle.floorColor;
+  const labelColor = visualMode === 'light' ? '#1f3159' : '#c7d6ff';
+  const labelShadow =
+    visualMode === 'light' ? '0 1px 3px rgba(255,255,255,0.9)' : '0 0 8px rgba(0,0,0,0.9)';
 
   // Border wireframe for protected-core
   const borderPoints: [number, number, number][] = [
@@ -70,7 +83,7 @@ export function District({ layout }: DistrictProps): React.JSX.Element {
       <mesh position={[layout.center.x, GROUND_Y, layout.center.z]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[width, depth]} />
         <meshStandardMaterial
-          color={zoneStyle.floorColor}
+          color={floorColor}
           transparent
           opacity={ZONE_LAYOUT_CONFIG[layout.zone].groundOpacity}
           roughness={0.9}
@@ -107,8 +120,8 @@ export function District({ layout }: DistrictProps): React.JSX.Element {
             pointerEvents: 'none',
             fontSize: '20px',
             fontWeight: 600,
-            color: '#c7d6ff',
-            textShadow: '0 0 8px rgba(0,0,0,0.9)',
+            color: labelColor,
+            textShadow: labelShadow,
             whiteSpace: 'nowrap',
           }}
         >
