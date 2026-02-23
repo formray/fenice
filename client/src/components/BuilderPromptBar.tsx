@@ -214,6 +214,25 @@ export function BuilderPromptBar(): React.JSX.Element {
     logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [logs]);
 
+  const glowKeyframes = `
+@keyframes builderShimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes builderGlow {
+  0%, 100% { box-shadow: 0 0 4px rgba(37, 99, 235, 0.3); }
+  50% { box-shadow: 0 0 12px rgba(37, 99, 235, 0.6), 0 0 24px rgba(37, 99, 235, 0.2); }
+}
+@keyframes builderPulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+@keyframes builderIndeterminate {
+  0% { left: -40%; }
+  100% { left: 100%; }
+}
+`;
+
   // Collapsed pill
   if (!expanded) {
     return (
@@ -456,24 +475,39 @@ export function BuilderPromptBar(): React.JSX.Element {
             )}
           </div>
           {isRunning && (
-            <div
-              style={{
-                height: '3px',
-                borderRadius: '2px',
-                backgroundColor: theme.progressBg,
-                overflow: 'hidden',
-              }}
-            >
-              <div
-                style={{
-                  height: '100%',
-                  width: `${getProgressPercent(status)}%`,
-                  backgroundColor: theme.progressFill,
-                  borderRadius: '2px',
-                  transition: 'width 0.4s ease',
-                }}
-              />
-            </div>
+            <>
+              <style>{glowKeyframes}</style>
+              <div style={{
+                height: '4px', borderRadius: '2px', backgroundColor: theme.progressBg,
+                overflow: 'hidden', position: 'relative' as const,
+                animation: 'builderGlow 2s ease-in-out infinite',
+              }}>
+                {status === 'planning' ? (
+                  /* Indeterminate shimmer during planning */
+                  <div style={{
+                    position: 'absolute' as const, height: '100%', width: '40%',
+                    background: `linear-gradient(90deg, transparent, ${theme.progressFill}, transparent)`,
+                    animation: 'builderIndeterminate 1.5s ease-in-out infinite',
+                  }} />
+                ) : (
+                  /* Determinate fill with shimmer during generation */
+                  <div style={{
+                    height: '100%', width: `${getProgressPercent(status)}%`,
+                    borderRadius: '2px', transition: 'width 0.6s ease',
+                    background: `linear-gradient(90deg, ${theme.progressFill}, #60a5fa, ${theme.progressFill})`,
+                    backgroundSize: '200% 100%',
+                    animation: 'builderShimmer 2s linear infinite, builderPulse 1.5s ease-in-out infinite',
+                  }} />
+                )}
+              </div>
+            </>
+          )}
+          {status === 'completed' && (
+            <div style={{
+              height: '4px', borderRadius: '2px', width: '100%',
+              backgroundColor: theme.successText,
+              boxShadow: `0 0 8px ${theme.successText}40, 0 0 16px ${theme.successText}20`,
+            }} />
           )}
         </div>
       )}
