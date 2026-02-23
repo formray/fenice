@@ -30,6 +30,7 @@ export function Building({ layout, endpoint }: BuildingProps): React.JSX.Element
 
   // Visual precedence: selection > method color (body is always method-colored)
   const baseColor = isSelected ? '#ffffff' : methodColor;
+  const accentBandY = ACCENT_RING_HEIGHT + 0.06;
 
   const handleClick = (e: ThreeEvent<MouseEvent>): void => {
     e.stopPropagation();
@@ -65,10 +66,8 @@ export function Building({ layout, endpoint }: BuildingProps): React.JSX.Element
         />
       </RoundedBox>
 
-      {/* Link-state accent band near roof for high visibility */}
-      <mesh
-        position={[layout.position.x, layout.height - ACCENT_RING_HEIGHT / 2, layout.position.z]}
-      >
+      {/* Link-state accent band near the base, slightly raised for camera readability */}
+      <mesh position={[layout.position.x, accentBandY, layout.position.z]}>
         <boxGeometry args={[layout.width + 0.1, ACCENT_RING_HEIGHT, layout.depth + 0.1]} />
         <meshStandardMaterial
           color={linkStyle.hex}
