@@ -24,7 +24,7 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
     const timer = setTimeout(() => {
       reject(new AppError(408, 'TIMEOUT', `${label} timed out after ${ms / 1000}s`));
     }, ms);
-    promise.then(resolve, reject).finally(() => clearTimeout(timer));
+    promise.then(resolve, reject).finally(() => { clearTimeout(timer); });
   });
 }
 
