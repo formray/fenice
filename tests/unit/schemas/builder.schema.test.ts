@@ -8,6 +8,9 @@ import {
   BuilderJobResultSchema,
   BuilderJobErrorSchema,
   BuilderJobQuerySchema,
+  BuilderPlanFileSchema,
+  BuilderPlanSchema,
+  BuilderApproveSchema,
 } from '../../../src/schemas/builder.schema.js';
 
 describe('BuilderJobStatusEnum', () => {
@@ -25,6 +28,18 @@ describe('BuilderJobStatusEnum', () => {
     for (const status of statuses) {
       expect(() => BuilderJobStatusEnum.parse(status)).not.toThrow();
     }
+  });
+
+  it('should accept planning status', () => {
+    expect(() => BuilderJobStatusEnum.parse('planning')).not.toThrow();
+  });
+
+  it('should accept plan_ready status', () => {
+    expect(() => BuilderJobStatusEnum.parse('plan_ready')).not.toThrow();
+  });
+
+  it('should accept rejected status', () => {
+    expect(() => BuilderJobStatusEnum.parse('rejected')).not.toThrow();
   });
 
   it('should reject invalid status', () => {
@@ -198,5 +213,101 @@ describe('BuilderJobQuerySchema', () => {
 
   it('should reject invalid status filter', () => {
     expect(() => BuilderJobQuerySchema.parse({ status: 'invalid' })).toThrow();
+  });
+});
+
+describe('BuilderPlanFileSchema', () => {
+  it('should accept a valid plan file', () => {
+    const file = {
+      path: 'src/schemas/product.schema.ts',
+      type: 'schema',
+      action: 'create',
+      description: 'Product schema with name, price, and category fields',
+    };
+    expect(() => BuilderPlanFileSchema.parse(file)).not.toThrow();
+  });
+
+  it('should reject invalid type (controller)', () => {
+    const file = {
+      path: 'src/controllers/product.controller.ts',
+      type: 'controller',
+      action: 'create',
+      description: 'Product controller',
+    };
+    expect(() => BuilderPlanFileSchema.parse(file)).toThrow();
+  });
+
+  it('should reject invalid action (delete)', () => {
+    const file = {
+      path: 'src/schemas/product.schema.ts',
+      type: 'schema',
+      action: 'delete',
+      description: 'Remove product schema',
+    };
+    expect(() => BuilderPlanFileSchema.parse(file)).toThrow();
+  });
+});
+
+describe('BuilderPlanSchema', () => {
+  it('should accept a valid plan', () => {
+    const plan = {
+      files: [
+        {
+          path: 'src/schemas/product.schema.ts',
+          type: 'schema',
+          action: 'create',
+          description: 'Product schema with name, price, and category fields',
+        },
+        {
+          path: 'src/models/product.model.ts',
+          type: 'model',
+          action: 'create',
+          description: 'Mongoose model for products collection',
+        },
+      ],
+      summary: 'Add product resource with schema, model, service, and routes',
+    };
+    expect(() => BuilderPlanSchema.parse(plan)).not.toThrow();
+  });
+
+  it('should reject empty files array', () => {
+    const plan = {
+      files: [],
+      summary: 'Empty plan',
+    };
+    expect(() => BuilderPlanSchema.parse(plan)).toThrow();
+  });
+
+  it('should reject missing summary', () => {
+    const plan = {
+      files: [
+        {
+          path: 'src/schemas/product.schema.ts',
+          type: 'schema',
+          action: 'create',
+          description: 'Product schema',
+        },
+      ],
+    };
+    expect(() => BuilderPlanSchema.parse(plan)).toThrow();
+  });
+});
+
+describe('BuilderApproveSchema', () => {
+  it('should accept a valid approve body', () => {
+    const body = {
+      plan: {
+        files: [
+          {
+            path: 'src/schemas/product.schema.ts',
+            type: 'schema',
+            action: 'create',
+            description: 'Product schema with name, price, and category fields',
+          },
+        ],
+        summary: 'Add product resource',
+      },
+    };
+    expect(() => BuilderApproveSchema.parse(body)).not.toThrow();
   });
 });

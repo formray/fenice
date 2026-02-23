@@ -8,12 +8,15 @@ const logger = createLogger('fenice', process.env['LOG_LEVEL'] ?? 'info');
 const STATUS_MESSAGES: Record<BuilderJobStatus, string> = {
   queued: 'Job queued',
   reading_context: 'Reading project context',
+  planning: 'Generating execution plan',
+  plan_ready: 'Plan ready for approval',
   generating: 'Generating code via Claude API',
   writing_files: 'Writing generated files to disk',
   validating: 'Running validation (lint + typecheck + test)',
   creating_pr: 'Creating pull request on GitHub',
   completed: 'Pipeline completed successfully',
   failed: 'Pipeline failed',
+  rejected: 'Plan rejected by user',
 };
 
 /**
