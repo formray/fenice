@@ -65,9 +65,11 @@ export function Building({ layout, endpoint }: BuildingProps): React.JSX.Element
         />
       </RoundedBox>
 
-      {/* Link-state accent ring at base */}
-      <mesh position={[layout.position.x, ACCENT_RING_HEIGHT / 2, layout.position.z]}>
-        <boxGeometry args={[layout.width, ACCENT_RING_HEIGHT, layout.depth]} />
+      {/* Link-state accent band near roof for high visibility */}
+      <mesh
+        position={[layout.position.x, layout.height - ACCENT_RING_HEIGHT / 2, layout.position.z]}
+      >
+        <boxGeometry args={[layout.width + 0.1, ACCENT_RING_HEIGHT, layout.depth + 0.1]} />
         <meshStandardMaterial
           color={linkStyle.hex}
           emissive={linkStyle.hex}

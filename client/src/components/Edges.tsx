@@ -62,41 +62,54 @@ export function Edges({
 
         const sourceEp = endpointMap.get(edge.sourceId);
         const targetEp = endpointMap.get(edge.targetId);
+        const isAuthBoundary = !!sourceEp && !!targetEp && sourceEp.hasAuth !== targetEp.hasAuth;
         const isIntraService =
           !!sourceEp && !!targetEp && sourceEp.serviceId === targetEp.serviceId;
         const isRelatedToSelection =
           selectedId !== null && (edge.sourceId === selectedId || edge.targetId === selectedId);
 
-        // Reduce visual clutter: hide intra-service mesh lines unless user focuses related endpoint.
-        if (isIntraService && !isRelatedToSelection) return null;
+        // Reduce visual clutter: hide intra-service lines unless selected, but always keep auth-boundary routes.
+        if (isIntraService && !isAuthBoundary && !isRelatedToSelection) return null;
 
         const sourceSem = endpointSemantics[edge.sourceId];
         const targetSem = endpointSemantics[edge.targetId];
         const edgeLinkState = worstLinkState(sourceSem?.linkState, targetSem?.linkState);
         const style = LINK_STATE_COLORS[edgeLinkState];
 
-        // Auth-gated: source is public (!hasAuth) AND target is protected (hasAuth)
-        const isAuthGated = !!sourceEp && !sourceEp.hasAuth && !!targetEp && targetEp.hasAuth;
-        const points = computeEdgePoints(source, target, gatePosition, isAuthGated);
+        const points = computeEdgePoints(source, target, gatePosition, isAuthBoundary);
 
         const isDashed = style.edgeStyle === 'dashed';
         const dashProps = isDashed ? { dashSize: 0.5, gapSize: 0.3 } : {};
         const baseWidth = isDashed ? 1 : 1.5;
-        const routeWidth = isAuthGated ? 3.0 : baseWidth;
+        const routeWidth = isAuthBoundary ? 4.5 : baseWidth;
         const baseOpacity = style.opacity;
-        const routeOpacity = isIntraService ? Math.min(baseOpacity, 0.18) : baseOpacity;
+        const routeOpacity = isAuthBoundary
+          ? Math.max(0.78, baseOpacity)
+          : isIntraService
+            ? Math.min(baseOpacity, 0.18)
+            : baseOpacity;
 
         return (
-          <Line
-            key={edge.id}
-            points={points}
-            color={style.hex}
-            lineWidth={routeWidth}
-            opacity={routeOpacity}
-            transparent
-            dashed={isDashed}
-            {...dashProps}
-          />
+          <group key={edge.id}>
+            {isAuthBoundary && (
+              <Line
+                points={points}
+                color={style.hex}
+                lineWidth={routeWidth + 1.5}
+                opacity={0.2}
+                transparent
+              />
+            )}
+            <Line
+              points={points}
+              color={style.hex}
+              lineWidth={routeWidth}
+              opacity={routeOpacity}
+              transparent
+              dashed={isDashed}
+              {...dashProps}
+            />
+          </group>
         );
       })}
     </group>
