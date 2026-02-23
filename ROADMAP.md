@@ -51,7 +51,20 @@ Infrastructure and performance improvements for production scale:
 
 The AI-native 3D city experience (React Three Fiber, AI builder, city metaphor). See [design doc](docs/plans/2026-02-21-fenice-design.md) for details.
 
-Execution tracking for active phases is maintained in [docs/3d-world/FENICE_3D_World_Roadmap_v0.2.md](docs/3d-world/FENICE_3D_World_Roadmap_v0.2.md).
+### Milestone status
+
+| Milestone | Status | Description |
+|-----------|--------|-------------|
+| M1 | Done | Static city from OpenAPI |
+| M2A | Done | Typed deltas + reducer + resync guard |
+| M2B | Done | Semantic contract (ok/degraded/blocked/unknown, zoning, auth gate) |
+| M2C | Done | Tron visual language (radial corridors, gate pulse/haze, HUD legend) |
+| M2D | Done | Visual clarity + KPI safety pass |
+| **M2** | **Closed** | **All sub-milestones complete, demo narrative shipped** |
+| M3 | Next | AI Builder PR-only (prompt-to-PR with safety gates) |
+| M4 | Planned | Multi-user collaboration |
+
+Execution tracking: [docs/3d-world/FENICE_3D_World_Roadmap_v0.2.md](docs/3d-world/FENICE_3D_World_Roadmap_v0.2.md).
 
 ## Contributing
 

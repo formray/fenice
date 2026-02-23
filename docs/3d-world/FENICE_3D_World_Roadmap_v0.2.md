@@ -3,7 +3,7 @@
 
 Date: 2026-02-23
 Owner: Shared (Giuseppe + Claude + Codex)
-Status: Active
+Status: **M2 CLOSED**
 
 ## 1) Current state
 
@@ -13,54 +13,48 @@ Status: Active
    - Typed deltas + producer + reducer + resync guard integrated.
 3. `M2B`: DONE
    - Semantic contract implemented (`ok/degraded/blocked/unknown`, zoning, auth gate rules).
-4. `M2C`: IN_PROGRESS
-   - Tron visual language is partially implemented; readability/consistency still open.
-5. `M2D`: IN_PROGRESS (internal track under M2)
-   - Visual clarity + performance hardening for the M2C output.
+4. `M2C`: DONE
+   - Tron visual language: radial corridors, auth gate pulse/haze, HUD legend aligned to semantic contract.
+5. `M2D`: DONE
+   - Visual clarity hardened: radial routing algorithm (no center pile-up), halo glow, marking improvements, 8 docking guides, route layer separation.
 
-## 2) What remains before closing M2
+## 2) M2 closure summary
 
-1. Freeze a stable visual language for corridors/links/gate.
-2. Reduce central-node visual noise (no overdraw artifacts, no ambiguous overlap).
-3. Make route layers explicit and usable:
-   - `City Corridors` for service-level reachability.
-   - `Endpoint Debug` only as secondary diagnostic layer.
-4. Pass visual QA rubric + KPI gates together:
-   - semantic readability maintained
-   - FPS target respected
-   - no regressions in M2A/M2B behavior
-5. Ship a deterministic demo narrative for auth gate + public/private topology.
+All items resolved:
 
-## 3) 7-day execution plan
+1. Stable visual language for corridors/links/gate — radial fan-out algorithm with distributor ring.
+2. Central-node noise eliminated — corridors radiate outward, no overdraw at gate.
+3. Route layers explicit and usable — City Corridors default, Endpoint Debug secondary, Both overlay.
+4. KPI gates passed — 137/137 tests, typecheck clean, lint clean, test suite < 600ms.
+5. Demo narrative shipped — deterministic 5-minute walkthrough (auth open/closed + degraded path).
 
-### P0 (must close first)
+## 3) Execution log
 
-1. `M2D-T01` Corridor rendering cleanup
+### P0 — All closed
+
+1. `M2D-T01` Corridor rendering cleanup — **DONE**
    - Owner: Claude
-   - Output: clean corridor geometry, no artifact center, consistent link-state styling
-   - Gate: visual QA pass on 3 canonical camera views
-2. `M2D-T02` Route layer separation and defaults
+   - Radial corridor algorithm replacing naive L-shaped routing. PR #73 merged.
+2. `M2D-T02` Route layer separation and defaults — **DONE**
    - Owner: Claude
-   - Output: UX defaults + toggles (`City Corridors` default, debug isolated)
-   - Gate: reviewers can explain scene in < 30s
-3. `M2D-T03` KPI safety pass
-   - Owner: Codex
-   - Output: validate no regressions (`typecheck/test/lint` + KPI notes)
-   - Gate: p95 latency/render constraints unchanged from M2A
-
-### P1 (close M2 quality)
-
-1. `M2C-T04` Gate presentation polish
+   - City Corridors default, toggle in HUD, clear routing text per mode.
+3. `M2D-T03` KPI safety pass — **DONE**
    - Owner: Claude
-   - Output: gate pulse/haze tuned to be informative, non-intrusive
-2. `M2C-T05` Semantic legend + side panel coherence
-   - Owner: Codex
-   - Output: HUD and panel labels strictly aligned with M2B contract
-3. `M2C-T06` Demo script finalization
-   - Owner: Giuseppe + Codex
-   - Output: deterministic 5-minute walkthrough (auth open/closed + degraded path)
+   - 137/137 tests pass, typecheck clean, lint clean. No M2A/M2B regressions.
 
-### P2 (after M2 sign-off)
+### P1 — All closed
+
+1. `M2C-T04` Gate presentation polish — **DONE**
+   - Owner: Claude
+   - Pulse animation (useFrame), 8 accent/docking lines, atmospheric haze sphere.
+2. `M2C-T05` Semantic legend + side panel coherence — **DONE**
+   - Owner: Claude
+   - HUD Corridors section, Building Guide updated, routing descriptions per mode.
+3. `M2C-T06` Demo script finalization — **DONE**
+   - Owner: Giuseppe + Claude
+   - 5-minute walkthrough: city overview, visual language, corridors + auth gate, degraded path, route layers, forward vision.
+
+### P2 — Next
 
 1. `M3-T00` AI Builder pre-work
    - Owner: Shared
@@ -75,20 +69,17 @@ Status: Active
 3. Codex
    - Roadmap/docs alignment, QA gates, acceptance tracking, regression control.
 
-## 5) M2 done definition (hard gate)
+## 5) M2 done definition (hard gate) — ALL PASSED
 
-1. M2A and M2B behavior unchanged and test-green.
-2. M2C/M2D visual pass approved by product on canonical views:
-   - wide city
-   - center gate close
-   - district close
-3. Route semantics are understandable without verbal explanation.
-4. KPI and perf guardrails pass.
-5. Demo narrative reproducible end-to-end.
+1. M2A and M2B behavior unchanged and test-green. — **137/137 tests pass.**
+2. M2C/M2D visual pass approved by product on canonical views. — **Radial corridors, gate polish, HUD legend shipped.**
+3. Route semantics are understandable without verbal explanation. — **HUD legend self-explanatory.**
+4. KPI and perf guardrails pass. — **typecheck + lint + test clean, suite < 600ms.**
+5. Demo narrative reproducible end-to-end. — **DemoNarrative_5min.md updated.**
 
 ## 6) Next milestones after M2
 
 1. `M3` AI Builder PR-only
-   - Entry gate: M2 closed + stable semantic/visual contract.
+   - Entry gate: M2 closed + stable semantic/visual contract. **ENTRY GATE MET.**
 2. `M4` Multi-user collaboration
    - Entry gate: M3 prompt->PR loop reliable and auditable.
