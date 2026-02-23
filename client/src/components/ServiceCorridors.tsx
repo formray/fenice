@@ -1,5 +1,5 @@
 import { useMemo, useRef } from 'react';
-import type { Mesh } from 'three';
+import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 import type { Position3D, DistrictLayout } from '../services/layout.service';
 import type { WorldEndpoint } from '../types/world';
@@ -9,7 +9,8 @@ import { RoadPolyline } from './RoadPolyline';
 import { useViewStore } from '../stores/view.store';
 
 const CORRIDOR_Y = 0.06;
-const CORRIDOR_LANE_STEP = 0.44;
+const CORRIDOR_LANE_STEP = 0.3;
+const DISTRIBUTOR_RADIUS = 3.2;
 
 export interface ServiceCorridorPath {
   serviceId: string;
@@ -41,14 +42,31 @@ export function computeCorridorPoints(
   gatePosition: Position3D,
   laneOffset: number
 ): Position3D[] {
-  const gateLaneX = gatePosition.x + laneOffset;
-  const gateLaneZ = gatePosition.z + laneOffset * 0.35;
+  // Radial angle from gate to district
+  const serviceAngle = Math.atan2(
+    districtCenter.z - gatePosition.z,
+    districtCenter.x - gatePosition.x
+  );
+
+  // Dock point on the distributor ring
+  const dockX = gatePosition.x + DISTRIBUTOR_RADIUS * Math.cos(serviceAngle);
+  const dockZ = gatePosition.z + DISTRIBUTOR_RADIUS * Math.sin(serviceAngle);
+
+  // Perpendicular offset (rotated 90 degrees from radial direction)
+  const perpAngle = serviceAngle + Math.PI / 2;
+  const offX = laneOffset * Math.cos(perpAngle);
+  const offZ = laneOffset * Math.sin(perpAngle);
+
+  // Intermediate waypoint at 55% of the distance from gate to district
+  const dist = Math.hypot(districtCenter.x - gatePosition.x, districtCenter.z - gatePosition.z);
+  const midRadius = dist * 0.55;
+  const midX = gatePosition.x + midRadius * Math.cos(serviceAngle) + offX;
+  const midZ = gatePosition.z + midRadius * Math.sin(serviceAngle) + offZ;
 
   return dedupePolyline([
-    { x: districtCenter.x, y: CORRIDOR_Y, z: districtCenter.z },
-    { x: districtCenter.x, y: CORRIDOR_Y, z: gateLaneZ },
-    { x: gateLaneX, y: CORRIDOR_Y, z: gateLaneZ },
-    { x: gateLaneX, y: CORRIDOR_Y, z: gatePosition.z },
+    { x: districtCenter.x + offX, y: CORRIDOR_Y, z: districtCenter.z + offZ },
+    { x: midX, y: CORRIDOR_Y, z: midZ },
+    { x: dockX + offX, y: CORRIDOR_Y, z: dockZ + offZ },
   ]);
 }
 
@@ -169,13 +187,13 @@ function CorridorFlowMarker({
   speed,
   phase,
 }: CorridorFlowMarkerProps): React.JSX.Element | null {
-  const meshRef = useRef<Mesh>(null);
+  const groupRef = useRef<THREE.Group>(null);
   const progressRef = useRef<number>(phase);
   const cache = useMemo(() => buildPolylineCache(points), [points]);
   const isMoving = speed > 0;
 
   useFrame((_, delta) => {
-    if (!meshRef.current || points.length < 2) return;
+    if (!groupRef.current || points.length < 2) return;
 
     if (isMoving) {
       const normalizedSpeed = speed / Math.max(1, cache.total);
@@ -183,22 +201,35 @@ function CorridorFlowMarker({
     }
 
     const p = samplePolyline(points, cache, progressRef.current);
-    meshRef.current.position.set(p.x, p.y + 0.09, p.z);
+    groupRef.current.position.set(p.x, p.y + 0.09, p.z);
   });
 
   if (points.length < 2) return null;
 
   return (
-    <mesh ref={meshRef}>
-      <sphereGeometry args={[0.09, 10, 10]} />
-      <meshStandardMaterial
-        color={color}
-        emissive={color}
-        emissiveIntensity={1.2}
-        roughness={0.2}
-        metalness={0.1}
-      />
-    </mesh>
+    <group ref={groupRef}>
+      <mesh>
+        <sphereGeometry args={[0.09, 10, 10]} />
+        <meshStandardMaterial
+          color={color}
+          emissive={color}
+          emissiveIntensity={1.2}
+          roughness={0.2}
+          metalness={0.1}
+        />
+      </mesh>
+      {/* Halo glow sphere */}
+      <mesh>
+        <sphereGeometry args={[0.22, 12, 12]} />
+        <meshBasicMaterial
+          color={color}
+          transparent
+          opacity={0.15}
+          blending={THREE.AdditiveBlending}
+          depthWrite={false}
+        />
+      </mesh>
+    </group>
   );
 }
 
@@ -236,6 +267,7 @@ export function ServiceCorridors({
               markingColor={style.hex}
               markingOpacity={markingOpacity}
               markingEmissiveIntensity={1.05}
+              showHalo
             />
             <CorridorFlowMarker
               points={corridor.points}

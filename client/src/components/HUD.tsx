@@ -260,8 +260,28 @@ export function HUD(): React.JSX.Element {
             Building Guide
           </div>
           <div>Body color = HTTP method</div>
-          <div>Base ring = link state</div>
-          <div>City corridors = service reachability via auth gate</div>
+          <div>Base ring = endpoint link state</div>
+          <div>Height = parameter complexity</div>
+        </div>
+
+        {/* Corridors legend */}
+        <div
+          style={{
+            marginTop: '14px',
+            borderTop: `1px solid ${theme.divider}`,
+            paddingTop: '10px',
+            fontSize: '10px',
+            color: theme.muted,
+            lineHeight: 1.5,
+          }}
+        >
+          <div style={{ textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
+            Corridors
+          </div>
+          <div>Radial roads from auth gate to protected services</div>
+          <div>Road color = worst link state of service endpoints</div>
+          <div>Flow markers = data flowing through the gate</div>
+          <div>Gate closed = all corridors blocked (red)</div>
         </div>
 
         {/* Routing hint legend */}
@@ -280,12 +300,14 @@ export function HUD(): React.JSX.Element {
             Routing
           </div>
           <div>
-            {routeLayerMode === 'city' && 'Showing aggregated service corridors through the gate.'}
+            {routeLayerMode === 'city' &&
+              'City view: aggregated corridors radiate from auth gate to service districts.'}
             {routeLayerMode === 'debug' &&
-              'Showing endpoint debug edges (select an endpoint/service).'}
-            {routeLayerMode === 'both' && 'Showing both city corridors and endpoint debug edges.'}
+              'Debug view: individual endpoint edges for detailed inspection.'}
+            {routeLayerMode === 'both' &&
+              'Combined view: city corridors overlaid with endpoint debug edges.'}
           </div>
-          <div style={{ marginTop: '4px' }}>Use Endpoint Debug only when you need fine detail.</div>
+          <div style={{ marginTop: '4px' }}>Switch to Endpoint Debug for per-endpoint detail.</div>
         </div>
       </div>
     </div>

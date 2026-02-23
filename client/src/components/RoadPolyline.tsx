@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import type { Position3D } from '../services/layout.service';
 
 interface RoadPolylineProps {
@@ -8,6 +9,7 @@ interface RoadPolylineProps {
   markingColor: string;
   markingOpacity: number;
   markingEmissiveIntensity?: number | undefined;
+  showHalo?: boolean | undefined;
 }
 
 const ROAD_THICKNESS = 0.02;
@@ -21,6 +23,7 @@ export function RoadPolyline({
   markingColor,
   markingOpacity,
   markingEmissiveIntensity = 0.25,
+  showHalo = false,
 }: RoadPolylineProps): React.JSX.Element {
   if (points.length < 2) return <></>;
 
@@ -40,7 +43,7 @@ export function RoadPolyline({
         const centerY = (start.y + end.y) / 2 + ROAD_THICKNESS / 2;
         const angle = Math.atan2(dz, dx);
         const markingLength = Math.max(0.05, length - 0.06);
-        const markingWidth = Math.max(0.05, width * 0.08);
+        const markingWidth = Math.max(0.05, width * 0.12);
 
         return (
           <group key={`road-seg-${idx}`}>
@@ -72,6 +75,20 @@ export function RoadPolyline({
           </group>
         );
       })}
+      {/* Halo glow at segment joints */}
+      {showHalo &&
+        points.map((pt, idx) => (
+          <mesh key={`halo-${idx}`} position={[pt.x, pt.y + ROAD_THICKNESS + 0.04, pt.z]}>
+            <sphereGeometry args={[width * 0.35, 10, 10]} />
+            <meshBasicMaterial
+              color={markingColor}
+              transparent
+              opacity={0.1}
+              blending={THREE.AdditiveBlending}
+              depthWrite={false}
+            />
+          </mesh>
+        ))}
     </group>
   );
 }
