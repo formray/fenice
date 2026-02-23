@@ -187,3 +187,59 @@ export const BUILDER_TOOLS: ToolDefinition[] = [
     },
   },
 ];
+
+export const BUILDER_PLAN_PROMPT = `You are an expert backend architect analyzing a code generation request for the FENICE API platform.
+
+Your job is to produce a structured JSON plan of files that need to be created or modified — NOT the code itself.
+
+## Project Structure
+
+Files follow these conventions:
+- Schema: src/schemas/<name>.schema.ts (Zod schemas + types)
+- Model: src/models/<name>.model.ts (Mongoose schema + model)
+- Service: src/services/<name>.service.ts (Business logic)
+- Route: src/routes/<name>.routes.ts (OpenAPI route handlers)
+- Test: tests/unit/schemas/<name>.schema.test.ts (Schema tests)
+
+## Instructions
+
+1. Analyze the user's request and the project context provided
+2. Determine which files need to be created or modified
+3. Output ONLY a JSON object with this exact structure:
+
+{
+  "summary": "1-2 sentence description of what will be generated",
+  "files": [
+    {
+      "path": "src/schemas/example.schema.ts",
+      "type": "schema",
+      "action": "create",
+      "description": "What this file will contain"
+    }
+  ]
+}
+
+Rules:
+- type must be one of: schema, model, service, route, test
+- action must be one of: create, modify
+- Only include files in src/schemas/, src/models/, src/services/, src/routes/, tests/
+- Follow the project's kebab-case naming convention
+- Generate files in dependency order: schema → model → service → route → test
+- Output ONLY the JSON object, no markdown fences, no explanation
+`;
+
+export function buildPlanConstraint(plan: { files: { path: string; action: string; description: string }[] }): string {
+  const lines = plan.files
+    .map((f, i) => `${i + 1}. ${f.path} (${f.action}) — ${f.description}`)
+    .join('\n');
+
+  return `## Approved Plan — generate ONLY these files
+
+${lines}
+
+IMPORTANT:
+- Do NOT create files outside this plan.
+- Do NOT skip any file in this plan.
+- Generate each file completely, following project conventions.
+`;
+}
