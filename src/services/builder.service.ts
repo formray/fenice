@@ -1,11 +1,11 @@
 import { resolve } from 'node:path';
 import { BuilderJobModel, type BuilderJobDocument } from '../models/builder-job.model.js';
-import type { BuilderOptions, BuilderJobStatus } from '../schemas/builder.schema.js';
+import type { BuilderOptions, BuilderJobStatus, BuilderPlan } from '../schemas/builder.schema.js';
 import type { PaginatedResponse } from '../schemas/common.schema.js';
 import { NotFoundError, AppError } from '../utils/errors.js';
 import { decodeCursor, encodeCursor } from '../utils/pagination.js';
 import { buildContextBundle } from './builder/context-reader.js';
-import { generateCode, repairCode } from './builder/code-generator.js';
+import { generateCode, repairCode, generatePlan } from './builder/code-generator.js';
 import { validateGeneratedFiles } from './builder/scope-policy.js';
 import { writeGeneratedFiles } from './builder/file-writer.js';
 import { createBranchAndCommit, pushBranch, cleanupBranch } from './builder/git-ops.js';
@@ -36,7 +36,7 @@ export class BuilderService {
       options: options ?? { dryRun: false, includeModel: true, includeTests: true },
     });
 
-    void this.executePipeline(job._id.toString(), prompt, options);
+    void this.executePlanning(job._id.toString(), prompt);
 
     return job;
   }
@@ -96,6 +96,38 @@ export class BuilderService {
     };
   }
 
+  async approve(jobId: string, plan: BuilderPlan): Promise<void> {
+    const job = await BuilderJobModel.findById(jobId);
+    if (!job) throw new NotFoundError('Builder job not found');
+    if (job.status !== 'plan_ready') {
+      throw new AppError(
+        400,
+        'INVALID_STATE',
+        `Job is in '${job.status}' state, expected 'plan_ready'`
+      );
+    }
+
+    await BuilderJobModel.findByIdAndUpdate(jobId, { plan, status: 'reading_context' });
+    this.notifier?.emitProgress(jobId, 'reading_context');
+
+    void this.executeGeneration(jobId, job.prompt, plan, job.options);
+  }
+
+  async reject(jobId: string): Promise<void> {
+    const job = await BuilderJobModel.findById(jobId);
+    if (!job) throw new NotFoundError('Builder job not found');
+    if (job.status !== 'plan_ready') {
+      throw new AppError(
+        400,
+        'INVALID_STATE',
+        `Job is in '${job.status}' state, expected 'plan_ready'`
+      );
+    }
+
+    await this.updateStatus(jobId, 'rejected');
+    this.notifier?.emitProgress(jobId, 'rejected');
+  }
+
   private async updateStatus(
     jobId: string,
     status: BuilderJobStatus,
@@ -130,16 +162,42 @@ export class BuilderService {
     return { token, owner, repo };
   }
 
-  private async executePipeline(
+  private async executePlanning(jobId: string, prompt: string): Promise<void> {
+    try {
+      await this.updateStatus(jobId, 'planning');
+      this.notifier?.emitProgress(jobId, 'planning');
+
+      const projectRoot = this.getProjectRoot();
+      const context = await buildContextBundle(projectRoot);
+      const apiKey = this.getApiKey();
+
+      const { plan } = await generatePlan(prompt, context, apiKey);
+      logger.info({ jobId, fileCount: plan.files.length }, 'Plan generated');
+
+      await BuilderJobModel.findByIdAndUpdate(jobId, { plan, status: 'plan_ready' });
+      this.notifier?.emitProgress(jobId, 'plan_ready');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      const code = err instanceof AppError ? err.code : 'PLANNING_ERROR';
+      logger.error({ jobId, error: message }, 'Planning failed');
+      await this.updateStatus(jobId, 'failed', {
+        error: { code, message, step: 'planning' as BuilderJobStatus },
+      });
+      this.notifier?.emitProgress(jobId, 'failed');
+    }
+  }
+
+  private async executeGeneration(
     jobId: string,
     prompt: string,
+    plan: BuilderPlan,
     options?: BuilderOptions
   ): Promise<void> {
     const isDryRun = options?.dryRun === true;
-    let currentStep: BuilderJobStatus = 'queued';
+    let currentStep: BuilderJobStatus = 'reading_context';
 
     try {
-      // Step 1: Read context
+      // Step 1: Read context (re-read since codebase may have changed since planning)
       currentStep = 'reading_context';
       await this.updateStatus(jobId, currentStep);
       this.notifier?.emitProgress(jobId, currentStep);
@@ -158,7 +216,7 @@ export class BuilderService {
             notifier.emitToolActivity(jobId, tool, path);
           }
         : undefined;
-      const result = await generateCode(prompt, context, projectRoot, apiKey, onToolActivity);
+      const result = await generateCode(prompt, context, projectRoot, apiKey, onToolActivity, plan);
       logger.info(
         { jobId, fileCount: result.files.length, violations: result.violations.length },
         'Code generation complete'
