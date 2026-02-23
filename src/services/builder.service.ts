@@ -17,6 +17,17 @@ import { createLogger } from '../utils/logger.js';
 
 const logger = createLogger('fenice', process.env['LOG_LEVEL'] ?? 'info');
 
+const PIPELINE_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new AppError(408, 'TIMEOUT', `${label} timed out after ${ms / 1000}s`));
+    }, ms);
+    promise.then(resolve, reject).finally(() => clearTimeout(timer));
+  });
+}
+
 export class BuilderService {
   private readonly notifier: BuilderWorldNotifier | null;
 
@@ -171,7 +182,11 @@ export class BuilderService {
       const context = await buildContextBundle(projectRoot);
       const apiKey = this.getApiKey();
 
-      const { plan } = await generatePlan(prompt, context, apiKey);
+      const { plan } = await withTimeout(
+        generatePlan(prompt, context, apiKey),
+        PIPELINE_TIMEOUT_MS,
+        'Planning'
+      );
       logger.info({ jobId, fileCount: plan.files.length }, 'Plan generated');
 
       await BuilderJobModel.findByIdAndUpdate(jobId, { plan, status: 'plan_ready' });
@@ -216,7 +231,11 @@ export class BuilderService {
             notifier.emitToolActivity(jobId, tool, path);
           }
         : undefined;
-      const result = await generateCode(prompt, context, projectRoot, apiKey, onToolActivity, plan);
+      const result = await withTimeout(
+        generateCode(prompt, context, projectRoot, apiKey, onToolActivity, plan),
+        PIPELINE_TIMEOUT_MS,
+        'Code generation'
+      );
       logger.info(
         { jobId, fileCount: result.files.length, violations: result.violations.length },
         'Code generation complete'
