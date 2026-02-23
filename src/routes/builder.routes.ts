@@ -42,6 +42,7 @@ function serializeJob(job: BuilderJobDocument): BuilderJob {
     prompt: json['prompt'] as string,
     status: json['status'] as BuilderJob['status'],
     options: json['options'] as BuilderJob['options'],
+    plan: json['plan'] as BuilderJob['plan'],
     result: json['result'] as BuilderJob['result'],
     error: json['error'] as BuilderJob['error'],
     userId: json['userId'] as string,

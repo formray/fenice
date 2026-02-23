@@ -212,10 +212,7 @@ export class BuilderService {
     let currentStep: BuilderJobStatus = 'reading_context';
 
     try {
-      // Step 1: Read context (re-read since codebase may have changed since planning)
-      currentStep = 'reading_context';
-      await this.updateStatus(jobId, currentStep);
-      this.notifier?.emitProgress(jobId, currentStep);
+      // Step 1: Read context (status already set to reading_context by approve())
       const projectRoot = this.getProjectRoot();
       const context = await buildContextBundle(projectRoot);
       logger.info({ jobId }, 'Context bundle built');

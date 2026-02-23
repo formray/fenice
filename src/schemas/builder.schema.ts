@@ -2,9 +2,9 @@ import { z } from 'zod';
 
 export const BuilderJobStatusEnum = z.enum([
   'queued',
-  'reading_context',
   'planning',
   'plan_ready',
+  'reading_context',
   'generating',
   'writing_files',
   'validating',
