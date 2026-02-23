@@ -18,8 +18,8 @@ export interface ZoneStyle {
 export const LINK_STATE_COLORS: Record<LinkState, LinkStateStyle> = {
   ok: { hex: '#00E5FF', emissiveIntensity: 0.15, opacity: 0.8, edgeStyle: 'solid' },
   degraded: { hex: '#FFB300', emissiveIntensity: 0.3, opacity: 0.6, edgeStyle: 'solid' },
-  blocked: { hex: '#FF1744', emissiveIntensity: 0.1, opacity: 0.3, edgeStyle: 'dashed' },
-  unknown: { hex: '#616161', emissiveIntensity: 0.0, opacity: 0.2, edgeStyle: 'solid' },
+  blocked: { hex: '#FF1744', emissiveIntensity: 0.1, opacity: 0.7, edgeStyle: 'dashed' },
+  unknown: { hex: '#616161', emissiveIntensity: 0.0, opacity: 0.3, edgeStyle: 'solid' },
 };
 
 export const ZONE_STYLES: Record<Zone, ZoneStyle> = {
@@ -53,3 +53,11 @@ export const METHOD_LABELS: Record<HttpMethod, string> = {
   head: 'HEAD',
   trace: 'TRACE',
 };
+
+// ─── Building accent ring tokens ─────────────────────────────────────────────
+
+/** Height of the link-state accent ring at building base */
+export const ACCENT_RING_HEIGHT = 0.08;
+
+/** Emissive intensity for building accent rings */
+export const ACCENT_EMISSIVE_INTENSITY = 0.4;
