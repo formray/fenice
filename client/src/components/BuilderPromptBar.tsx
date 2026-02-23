@@ -55,6 +55,8 @@ const BUILDER_THEME = {
 
 const STATUS_LABELS: Record<BuilderJobStatus, string> = {
   queued: 'Queued',
+  planning: 'Planning...',
+  plan_ready: 'Plan ready — awaiting approval',
   reading_context: 'Reading project context...',
   generating: 'Generating code...',
   writing_files: 'Writing files...',
@@ -62,10 +64,13 @@ const STATUS_LABELS: Record<BuilderJobStatus, string> = {
   creating_pr: 'Creating pull request...',
   completed: 'Completed',
   failed: 'Failed',
+  rejected: 'Rejected',
 };
 
 const PROGRESS_ORDER: BuilderJobStatus[] = [
   'queued',
+  'planning',
+  'plan_ready',
   'reading_context',
   'generating',
   'writing_files',
@@ -105,7 +110,8 @@ export function BuilderPromptBar(): React.JSX.Element {
   const theme = BUILDER_THEME[visualMode];
   const logEndRef = useRef<HTMLDivElement>(null);
 
-  const isRunning = status !== null && status !== 'completed' && status !== 'failed';
+  const isRunning =
+    status !== null && status !== 'completed' && status !== 'failed' && status !== 'rejected';
   const canSubmit = prompt.length >= 10 && prompt.length <= 2000 && !submitting && !isRunning;
 
   const handleSubmit = useCallback(async () => {
@@ -374,7 +380,7 @@ export function BuilderPromptBar(): React.JSX.Element {
                 color:
                   status === 'completed'
                     ? theme.successText
-                    : status === 'failed'
+                    : status === 'failed' || status === 'rejected'
                       ? theme.errorText
                       : theme.text,
                 fontWeight: 500,
@@ -382,7 +388,7 @@ export function BuilderPromptBar(): React.JSX.Element {
             >
               {statusMessage ?? STATUS_LABELS[status]}
             </span>
-            {(status === 'completed' || status === 'failed') && (
+            {(status === 'completed' || status === 'failed' || status === 'rejected') && (
               <button
                 type="button"
                 onClick={dismiss}

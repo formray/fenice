@@ -5,13 +5,16 @@
 
 export type BuilderJobStatus =
   | 'queued'
+  | 'planning'
+  | 'plan_ready'
   | 'reading_context'
   | 'generating'
   | 'writing_files'
   | 'validating'
   | 'creating_pr'
   | 'completed'
-  | 'failed';
+  | 'failed'
+  | 'rejected';
 
 export interface BuilderGeneratedFile {
   path: string;
@@ -33,6 +36,20 @@ export interface BuilderJobError {
   step?: BuilderJobStatus | undefined;
 }
 
+export type BuilderPlanFileType = 'schema' | 'model' | 'service' | 'route' | 'test';
+
+export interface BuilderPlanFile {
+  path: string;
+  type: BuilderPlanFileType;
+  action: 'create' | 'modify';
+  description: string;
+}
+
+export interface BuilderPlan {
+  files: BuilderPlanFile[];
+  summary: string;
+}
+
 export interface BuilderProgressPayload {
   jobId: string;
   status: BuilderJobStatus;
@@ -44,6 +61,7 @@ export interface BuilderJob {
   id: string;
   prompt: string;
   status: BuilderJobStatus;
+  plan?: BuilderPlan | undefined;
   result?: BuilderJobResult | undefined;
   error?: BuilderJobError | undefined;
   userId: string;
