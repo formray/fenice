@@ -7,12 +7,16 @@ import { District } from './District';
 import { AuthGate } from './AuthGate';
 import { RingRoads } from './RingRoads';
 import { Boulevards } from './Boulevards';
+import { ServiceCorridors } from './ServiceCorridors';
+import { useViewStore } from '../stores/view.store';
 
 export function City(): React.JSX.Element | null {
   const services = useWorldStore((s) => s.services);
   const endpoints = useWorldStore((s) => s.endpoints);
   const edges = useWorldStore((s) => s.edges);
   const endpointSemantics = useWorldStore((s) => s.endpointSemantics);
+  const authGate = useWorldStore((s) => s.authGate);
+  const routeLayerMode = useViewStore((s) => s.routeLayerMode);
 
   const layout = useMemo(() => computeCityLayout(services, endpoints), [services, endpoints]);
 
@@ -33,13 +37,25 @@ export function City(): React.JSX.Element | null {
         if (!endpoint) return null;
         return <Building key={b.endpointId} layout={b} endpoint={endpoint} />;
       })}
-      <Edges
-        edges={edges}
-        buildingLayouts={layout.buildings}
-        endpointSemantics={endpointSemantics}
-        endpointMap={endpointMap}
-        gatePosition={layout.gatePosition}
-      />
+      {(routeLayerMode === 'city' || routeLayerMode === 'both') && (
+        <ServiceCorridors
+          districts={layout.districts}
+          endpoints={endpoints}
+          endpointSemantics={endpointSemantics}
+          authGate={authGate}
+          gatePosition={layout.gatePosition}
+        />
+      )}
+      {(routeLayerMode === 'debug' || routeLayerMode === 'both') && (
+        <Edges
+          edges={edges}
+          buildingLayouts={layout.buildings}
+          endpointSemantics={endpointSemantics}
+          endpointMap={endpointMap}
+          gatePosition={layout.gatePosition}
+          selectedServiceOnly
+        />
+      )}
     </group>
   );
 }

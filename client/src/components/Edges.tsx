@@ -5,6 +5,7 @@ import type { BuildingLayout, Position3D } from '../services/layout.service';
 import type { SemanticState } from '../types/semantic';
 import { LINK_STATE_COLORS } from '../utils/colors';
 import type { LinkState } from '../types/semantic';
+import { useSelectionStore } from '../stores/selection.store';
 
 const ROUTE_Y = 0.05;
 const LANE_STEP = 0.28;
@@ -64,6 +65,7 @@ interface EdgesProps {
   endpointSemantics: Record<string, SemanticState>;
   endpointMap: Map<string, WorldEndpoint>;
   gatePosition: Position3D;
+  selectedServiceOnly?: boolean | undefined;
 }
 
 /** Determine worst linkState between two endpoints for edge coloring */
@@ -141,11 +143,16 @@ export function Edges({
   endpointSemantics,
   endpointMap,
   gatePosition,
+  selectedServiceOnly = false,
 }: EdgesProps): React.JSX.Element {
   const posMap = useMemo(
     () => new Map(buildingLayouts.map((b) => [b.endpointId, b.position])),
     [buildingLayouts]
   );
+  const selectedEndpointId = useSelectionStore((s) => s.selectedId);
+  const selectedServiceId = selectedEndpointId
+    ? endpointMap.get(selectedEndpointId)?.serviceId
+    : undefined;
 
   const serviceHubs = useMemo(() => {
     const sums = new Map<string, { x: number; z: number; count: number }>();
@@ -180,6 +187,9 @@ export function Edges({
       const sourceEp = endpointMap.get(edge.sourceId);
       const targetEp = endpointMap.get(edge.targetId);
       if (!source || !target || !sourceEp || !targetEp) continue;
+
+      if (selectedServiceOnly && (!selectedServiceId || sourceEp.serviceId !== selectedServiceId))
+        continue;
 
       const isAuthBoundary = sourceEp.hasAuth !== targetEp.hasAuth;
       const isIntraService = sourceEp.serviceId === targetEp.serviceId;
@@ -227,7 +237,7 @@ export function Edges({
     return visible
       .map(({ groupKey: _groupKey, ...route }) => route)
       .sort((a, b) => Number(a.isAuthBoundary) - Number(b.isAuthBoundary));
-  }, [edges, endpointMap, posMap]);
+  }, [edges, endpointMap, posMap, selectedServiceId, selectedServiceOnly]);
 
   return (
     <group>

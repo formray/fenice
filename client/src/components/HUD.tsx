@@ -3,6 +3,7 @@ import { useViewStore } from '../stores/view.store';
 import { METHOD_COLORS, METHOD_LABELS, LINK_STATE_COLORS } from '../utils/colors';
 import type { HttpMethod } from '../types/world';
 import type { LinkState } from '../types/semantic';
+import type { RouteLayerMode } from '../stores/view.store';
 
 const LEGEND_METHODS: HttpMethod[] = ['get', 'post', 'put', 'patch', 'delete'];
 
@@ -11,6 +12,12 @@ const LEGEND_LINK_STATES: { state: LinkState; label: string }[] = [
   { state: 'degraded', label: 'Degraded' },
   { state: 'blocked', label: 'Blocked' },
   { state: 'unknown', label: 'Unknown' },
+];
+
+const ROUTE_LAYER_OPTIONS: Array<{ mode: RouteLayerMode; label: string }> = [
+  { mode: 'city', label: 'City Corridors' },
+  { mode: 'debug', label: 'Endpoint Debug' },
+  { mode: 'both', label: 'Both' },
 ];
 
 const HUD_THEME = {
@@ -43,6 +50,8 @@ export function HUD(): React.JSX.Element {
   const endpoints = useWorldStore((s) => s.endpoints);
   const visualMode = useViewStore((s) => s.visualMode);
   const toggleVisualMode = useViewStore((s) => s.toggleVisualMode);
+  const routeLayerMode = useViewStore((s) => s.routeLayerMode);
+  const setRouteLayerMode = useViewStore((s) => s.setRouteLayerMode);
   const theme = HUD_THEME[visualMode];
 
   return (
@@ -79,6 +88,44 @@ export function HUD(): React.JSX.Element {
         >
           Theme: {visualMode === 'dark' ? 'Dark' : 'Light'}
         </button>
+      </div>
+
+      <div style={{ marginBottom: '10px', pointerEvents: 'auto' }}>
+        <div
+          style={{
+            fontSize: '10px',
+            color: theme.muted,
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px',
+            marginBottom: '6px',
+          }}
+        >
+          Route Layer
+        </div>
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', maxWidth: '230px' }}>
+          {ROUTE_LAYER_OPTIONS.map((option) => {
+            const active = option.mode === routeLayerMode;
+            return (
+              <button
+                key={option.mode}
+                type="button"
+                onClick={() => setRouteLayerMode(option.mode)}
+                style={{
+                  border: `1px solid ${active ? '#4ea2ff' : theme.buttonBorder}`,
+                  backgroundColor: active ? 'rgba(34, 115, 220, 0.22)' : theme.buttonBg,
+                  color: theme.buttonText,
+                  borderRadius: '999px',
+                  padding: '5px 9px',
+                  fontSize: '10px',
+                  fontWeight: active ? 700 : 500,
+                  cursor: 'pointer',
+                }}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <div
@@ -214,7 +261,7 @@ export function HUD(): React.JSX.Element {
           </div>
           <div>Body color = HTTP method</div>
           <div>Base ring = link state</div>
-          <div>Thick edge = auth-gated route</div>
+          <div>City corridors = service reachability via auth gate</div>
         </div>
 
         {/* Routing hint legend */}
@@ -232,8 +279,13 @@ export function HUD(): React.JSX.Element {
           <div style={{ textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
             Routing
           </div>
-          <div>Edge color shows link state between endpoints.</div>
-          <div style={{ marginTop: '4px' }}>Thick lines route through the auth gate.</div>
+          <div>
+            {routeLayerMode === 'city' && 'Showing aggregated service corridors through the gate.'}
+            {routeLayerMode === 'debug' &&
+              'Showing endpoint debug edges (select an endpoint/service).'}
+            {routeLayerMode === 'both' && 'Showing both city corridors and endpoint debug edges.'}
+          </div>
+          <div style={{ marginTop: '4px' }}>Use Endpoint Debug only when you need fine detail.</div>
         </div>
       </div>
     </div>
