@@ -8,7 +8,12 @@ import { buildContextBundle } from './builder/context-reader.js';
 import { generateCode, repairCode, generatePlan } from './builder/code-generator.js';
 import { validateGeneratedFiles } from './builder/scope-policy.js';
 import { writeGeneratedFiles } from './builder/file-writer.js';
-import { createBranchAndCommit, pushBranch, cleanupBranch } from './builder/git-ops.js';
+import {
+  createBranchAndCommit,
+  createDraftBranchAndCommit,
+  pushBranch,
+  cleanupBranch,
+} from './builder/git-ops.js';
 import { createPullRequest } from './builder/github-pr.js';
 import { validateProject, formatValidationErrors } from './builder/validator.js';
 import { BuilderWorldNotifier } from './builder/world-notifier.js';
@@ -24,7 +29,9 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
     const timer = setTimeout(() => {
       reject(new AppError(408, 'TIMEOUT', `${label} timed out after ${ms / 1000}s`));
     }, ms);
-    promise.then(resolve, reject).finally(() => { clearTimeout(timer); });
+    promise.then(resolve, reject).finally(() => {
+      clearTimeout(timer);
+    });
   });
 }
 
@@ -222,6 +229,7 @@ export class BuilderService {
       await this.updateStatus(jobId, currentStep);
       this.notifier?.emitProgress(jobId, currentStep);
       const apiKey = this.getApiKey();
+      const totalTokens = { input: 0, output: 0 };
       const notifier = this.notifier;
       const onToolActivity = notifier
         ? (tool: string, path: string): void => {
@@ -233,6 +241,8 @@ export class BuilderService {
         PIPELINE_TIMEOUT_MS,
         'Code generation'
       );
+      totalTokens.input += result.tokenUsage.inputTokens;
+      totalTokens.output += result.tokenUsage.outputTokens;
       logger.info(
         { jobId, fileCount: result.files.length, violations: result.violations.length },
         'Code generation complete'
@@ -263,6 +273,7 @@ export class BuilderService {
           result: {
             files: result.files,
             validationPassed: true,
+            tokenUsage: { inputTokens: totalTokens.input, outputTokens: totalTokens.output },
           },
         });
         // Emit synthetic deltas so the 3D world previews new buildings
@@ -287,38 +298,75 @@ export class BuilderService {
       let currentFiles = result.files;
       let validation = await validateProject(projectRoot);
 
-      if (!validation.passed) {
-        // Self-repair: one retry
-        logger.warn({ jobId }, 'Validation failed, attempting self-repair');
+      // Level 1: Repair (up to 2 attempts)
+      const MAX_REPAIR_ATTEMPTS = 2;
+      for (let attempt = 1; attempt <= MAX_REPAIR_ATTEMPTS && !validation.passed; attempt++) {
+        logger.warn({ jobId, attempt }, 'Validation failed, attempting repair');
         const errorSummary = formatValidationErrors(validation);
         const repairResult = await repairCode(currentFiles, errorSummary, projectRoot, apiKey);
 
         if (repairResult.violations.length > 0) {
-          throw new AppError(
-            400,
-            'REPAIR_SCOPE_VIOLATION',
-            `Repair scope violations: ${repairResult.violations.map((v) => `${v.file}: ${v.reason}`).join('; ')}`
+          logger.error(
+            { jobId, violations: repairResult.violations },
+            'Repair had scope violations'
           );
+          break; // Don't count violation repairs, fall through to draft
         }
 
-        // Rewrite repaired files
         await writeGeneratedFiles(projectRoot, repairResult.files);
         currentFiles = repairResult.files;
+        totalTokens.input += repairResult.tokenUsage.inputTokens;
+        totalTokens.output += repairResult.tokenUsage.outputTokens;
 
-        // Re-validate after repair
         validation = await validateProject(projectRoot);
-        if (!validation.passed) {
-          const finalErrors = formatValidationErrors(validation);
-          throw new AppError(
-            400,
-            'VALIDATION_FAILED',
-            `Validation failed after self-repair: ${finalErrors}`
-          );
+        if (validation.passed) {
+          logger.info({ jobId, attempt }, 'Repair succeeded');
         }
-        logger.info({ jobId }, 'Self-repair succeeded');
       }
 
-      const validationPassed = validation.passed;
+      if (!validation.passed) {
+        // Level 2: Draft PR (still useful code, needs manual fixes)
+        logger.warn({ jobId }, 'Repair exhausted, creating draft PR');
+
+        const { branch: draftBranch } = await createDraftBranchAndCommit(
+          projectRoot,
+          jobId,
+          prompt,
+          writtenPaths
+        );
+        const github = this.getGitHubConfig();
+        await pushBranch(projectRoot, draftBranch);
+
+        const pr = await createPullRequest(
+          draftBranch,
+          prompt,
+          currentFiles,
+          jobId,
+          false,
+          github.token,
+          github.owner,
+          github.repo
+        );
+
+        await cleanupBranch(projectRoot, draftBranch);
+
+        await this.updateStatus(jobId, 'completed_draft', {
+          result: {
+            files: currentFiles,
+            prUrl: pr.prUrl,
+            prNumber: pr.prNumber,
+            branch: draftBranch,
+            validationPassed: false,
+            validationErrors: validation.errors
+              .filter((e) => !e.passed)
+              .map((e) => `${e.step}: ${e.output.slice(0, 500)}`),
+            tokenUsage: { inputTokens: totalTokens.input, outputTokens: totalTokens.output },
+          },
+        });
+        this.notifier?.emitSyntheticDeltas(jobId, currentFiles);
+        this.notifier?.emitProgress(jobId, 'completed_draft');
+        return;
+      }
 
       // Step 5: Push branch and create PR
       currentStep = 'creating_pr';
@@ -331,7 +379,7 @@ export class BuilderService {
         prompt,
         currentFiles,
         jobId,
-        validationPassed,
+        true,
         github.token,
         github.owner,
         github.repo
@@ -347,7 +395,8 @@ export class BuilderService {
           prUrl: pr.prUrl,
           prNumber: pr.prNumber,
           branch,
-          validationPassed,
+          validationPassed: true,
+          tokenUsage: { inputTokens: totalTokens.input, outputTokens: totalTokens.output },
         },
       });
 
