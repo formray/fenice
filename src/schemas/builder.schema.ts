@@ -10,8 +10,18 @@ export const BuilderJobStatusEnum = z.enum([
   'validating',
   'creating_pr',
   'completed',
+  'completed_draft',
   'failed',
   'rejected',
+]);
+
+export const TaskTypeEnum = z.enum([
+  'new-resource',
+  'refactor',
+  'bugfix',
+  'schema-migration',
+  'test-gen',
+  'doc-gen',
 ]);
 
 export const BuilderOptionsSchema = z
@@ -20,6 +30,7 @@ export const BuilderOptionsSchema = z
     targetTag: z.string().min(1).max(50).optional(),
     includeModel: z.boolean().default(true),
     includeTests: z.boolean().default(true),
+    taskType: TaskTypeEnum.optional(),
   })
   .strict();
 
@@ -40,6 +51,29 @@ export const BuilderJobResultSchema = z.object({
   prNumber: z.number().int().positive().optional(),
   branch: z.string().optional(),
   validationPassed: z.boolean().optional(),
+  validationErrors: z.array(z.string()).optional(),
+  tokenUsage: z
+    .object({
+      input: z.number(),
+      output: z.number(),
+    })
+    .optional(),
+  diffs: z
+    .array(
+      z.object({
+        path: z.string(),
+        diff: z.string(),
+      })
+    )
+    .optional(),
+  planCoverage: z
+    .object({
+      planned: z.array(z.string()),
+      generated: z.array(z.string()),
+      missing: z.array(z.string()),
+    })
+    .optional(),
+  impactedFiles: z.array(z.string()).optional(),
 });
 
 export const BuilderJobErrorSchema = z.object({
@@ -60,6 +94,8 @@ export const BuilderPlanFileSchema = z.object({
 export const BuilderPlanSchema = z.object({
   files: z.array(BuilderPlanFileSchema).min(1),
   summary: z.string().min(1).max(1000),
+  taskType: TaskTypeEnum.optional(),
+  contextFiles: z.array(z.string().min(1)).optional(),
 });
 
 export const BuilderApproveSchema = z.object({
@@ -95,3 +131,4 @@ export type BuilderPlanFileType = z.infer<typeof BuilderPlanFileTypeEnum>;
 export type BuilderPlanFile = z.infer<typeof BuilderPlanFileSchema>;
 export type BuilderPlan = z.infer<typeof BuilderPlanSchema>;
 export type BuilderApprove = z.infer<typeof BuilderApproveSchema>;
+export type TaskType = z.infer<typeof TaskTypeEnum>;

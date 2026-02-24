@@ -11,6 +11,7 @@ import {
   BuilderPlanFileSchema,
   BuilderPlanSchema,
   BuilderApproveSchema,
+  TaskTypeEnum,
 } from '../../../src/schemas/builder.schema.js';
 
 describe('BuilderJobStatusEnum', () => {
@@ -309,5 +310,246 @@ describe('BuilderApproveSchema', () => {
       },
     };
     expect(() => BuilderApproveSchema.parse(body)).not.toThrow();
+  });
+});
+
+// ============================================================
+// M5 Builder v2 — Batch 1: Schema & Model Foundation
+// ============================================================
+
+describe('TaskTypeEnum (Task 1)', () => {
+  const validTypes = [
+    'new-resource',
+    'refactor',
+    'bugfix',
+    'schema-migration',
+    'test-gen',
+    'doc-gen',
+  ];
+
+  it('should accept all 6 valid task types', () => {
+    for (const type of validTypes) {
+      expect(() => TaskTypeEnum.parse(type)).not.toThrow();
+    }
+  });
+
+  it('should reject invalid task type', () => {
+    expect(() => TaskTypeEnum.parse('deploy')).toThrow();
+    expect(() => TaskTypeEnum.parse('new_resource')).toThrow();
+    expect(() => TaskTypeEnum.parse('')).toThrow();
+  });
+});
+
+describe('BuilderOptionsSchema with taskType (Task 1)', () => {
+  it('should accept valid taskType', () => {
+    const result = BuilderOptionsSchema.parse({ taskType: 'new-resource' });
+    expect(result.taskType).toBe('new-resource');
+  });
+
+  it('should accept options without taskType (optional)', () => {
+    const result = BuilderOptionsSchema.parse({});
+    expect(result.taskType).toBeUndefined();
+  });
+
+  it('should reject invalid taskType', () => {
+    expect(() => BuilderOptionsSchema.parse({ taskType: 'invalid-type' })).toThrow();
+  });
+
+  it('should still reject unknown properties (strict)', () => {
+    expect(() => BuilderOptionsSchema.parse({ taskType: 'bugfix', somethingElse: true })).toThrow();
+  });
+
+  it('should accept taskType alongside other options', () => {
+    const result = BuilderOptionsSchema.parse({
+      dryRun: true,
+      taskType: 'refactor',
+      includeTests: false,
+    });
+    expect(result.dryRun).toBe(true);
+    expect(result.taskType).toBe('refactor');
+    expect(result.includeTests).toBe(false);
+  });
+});
+
+describe('BuilderPlanSchema with contextFiles and taskType (Task 2)', () => {
+  const validPlan = {
+    files: [
+      {
+        path: 'src/schemas/product.schema.ts',
+        type: 'schema' as const,
+        action: 'create' as const,
+        description: 'Product schema',
+      },
+    ],
+    summary: 'Add product resource',
+  };
+
+  it('should accept plan with contextFiles', () => {
+    const plan = {
+      ...validPlan,
+      contextFiles: ['src/schemas/common.schema.ts', 'src/models/user.model.ts'],
+    };
+    const result = BuilderPlanSchema.parse(plan);
+    expect(result.contextFiles).toEqual([
+      'src/schemas/common.schema.ts',
+      'src/models/user.model.ts',
+    ]);
+  });
+
+  it('should accept plan with taskType', () => {
+    const plan = {
+      ...validPlan,
+      taskType: 'new-resource',
+    };
+    const result = BuilderPlanSchema.parse(plan);
+    expect(result.taskType).toBe('new-resource');
+  });
+
+  it('should accept plan with both contextFiles and taskType', () => {
+    const plan = {
+      ...validPlan,
+      contextFiles: ['src/config/env.ts'],
+      taskType: 'bugfix',
+    };
+    const result = BuilderPlanSchema.parse(plan);
+    expect(result.contextFiles).toEqual(['src/config/env.ts']);
+    expect(result.taskType).toBe('bugfix');
+  });
+
+  it('should accept plan without contextFiles and taskType (optional)', () => {
+    const result = BuilderPlanSchema.parse(validPlan);
+    expect(result.contextFiles).toBeUndefined();
+    expect(result.taskType).toBeUndefined();
+  });
+
+  it('should reject contextFiles with empty strings', () => {
+    const plan = {
+      ...validPlan,
+      contextFiles: [''],
+    };
+    expect(() => BuilderPlanSchema.parse(plan)).toThrow();
+  });
+
+  it('should reject invalid taskType in plan', () => {
+    const plan = {
+      ...validPlan,
+      taskType: 'invalid',
+    };
+    expect(() => BuilderPlanSchema.parse(plan)).toThrow();
+  });
+});
+
+describe('BuilderJobStatusEnum with completed_draft (Task 3)', () => {
+  it('should accept completed_draft status', () => {
+    expect(() => BuilderJobStatusEnum.parse('completed_draft')).not.toThrow();
+  });
+
+  it('should still accept all original statuses plus completed_draft', () => {
+    const allStatuses = [
+      'queued',
+      'planning',
+      'plan_ready',
+      'reading_context',
+      'generating',
+      'writing_files',
+      'validating',
+      'creating_pr',
+      'completed',
+      'completed_draft',
+      'failed',
+      'rejected',
+    ];
+    for (const status of allStatuses) {
+      expect(() => BuilderJobStatusEnum.parse(status)).not.toThrow();
+    }
+  });
+});
+
+describe('BuilderJobResultSchema enriched fields (Task 3)', () => {
+  const baseResult = {
+    files: [{ path: 'src/test.ts', content: 'code', action: 'created' as const }],
+  };
+
+  it('should accept validationErrors', () => {
+    const result = BuilderJobResultSchema.parse({
+      ...baseResult,
+      validationErrors: ['TS2345: Argument of type...', 'ESLint: no-unused-vars'],
+    });
+    expect(result.validationErrors).toHaveLength(2);
+  });
+
+  it('should accept tokenUsage', () => {
+    const result = BuilderJobResultSchema.parse({
+      ...baseResult,
+      tokenUsage: { input: 15000, output: 3500 },
+    });
+    expect(result.tokenUsage?.input).toBe(15000);
+    expect(result.tokenUsage?.output).toBe(3500);
+  });
+
+  it('should accept diffs', () => {
+    const result = BuilderJobResultSchema.parse({
+      ...baseResult,
+      diffs: [
+        { path: 'src/schemas/product.schema.ts', diff: '+export const ProductSchema...' },
+        { path: 'src/models/product.model.ts', diff: '+import mongoose...' },
+      ],
+    });
+    expect(result.diffs).toHaveLength(2);
+    expect(result.diffs?.[0]?.path).toBe('src/schemas/product.schema.ts');
+  });
+
+  it('should accept planCoverage', () => {
+    const result = BuilderJobResultSchema.parse({
+      ...baseResult,
+      planCoverage: {
+        planned: ['src/schemas/product.schema.ts', 'src/models/product.model.ts'],
+        generated: ['src/schemas/product.schema.ts'],
+        missing: ['src/models/product.model.ts'],
+      },
+    });
+    expect(result.planCoverage?.planned).toHaveLength(2);
+    expect(result.planCoverage?.missing).toEqual(['src/models/product.model.ts']);
+  });
+
+  it('should accept impactedFiles', () => {
+    const result = BuilderJobResultSchema.parse({
+      ...baseResult,
+      impactedFiles: ['src/index.ts', 'src/routes/product.routes.ts'],
+    });
+    expect(result.impactedFiles).toHaveLength(2);
+  });
+
+  it('should accept all enriched fields together', () => {
+    const result = BuilderJobResultSchema.parse({
+      ...baseResult,
+      prUrl: 'https://github.com/formray/fenice/pull/42',
+      prNumber: 42,
+      branch: 'builder/abc-products',
+      validationPassed: false,
+      validationErrors: ['TS2345: type mismatch'],
+      tokenUsage: { input: 20000, output: 5000 },
+      diffs: [{ path: 'src/test.ts', diff: '+code' }],
+      planCoverage: {
+        planned: ['src/test.ts'],
+        generated: ['src/test.ts'],
+        missing: [],
+      },
+      impactedFiles: ['src/index.ts'],
+    });
+    expect(result.validationErrors).toHaveLength(1);
+    expect(result.tokenUsage?.input).toBe(20000);
+    expect(result.diffs).toHaveLength(1);
+    expect(result.planCoverage?.missing).toEqual([]);
+    expect(result.impactedFiles).toHaveLength(1);
+  });
+
+  it('should accept result without any enriched fields (backward compatible)', () => {
+    const result = BuilderJobResultSchema.parse(baseResult);
+    expect(result.validationErrors).toBeUndefined();
+    expect(result.tokenUsage).toBeUndefined();
+    expect(result.diffs).toBeUndefined();
+    expect(result.planCoverage).toBeUndefined();
+    expect(result.impactedFiles).toBeUndefined();
   });
 });

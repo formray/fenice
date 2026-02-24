@@ -15,6 +15,7 @@ const STATUS_MESSAGES: Record<BuilderJobStatus, string> = {
   validating: 'Running validation (lint + typecheck + test)',
   creating_pr: 'Creating pull request on GitHub',
   completed: 'Pipeline completed successfully',
+  completed_draft: 'Pipeline completed as draft (validation issues)',
   failed: 'Pipeline failed',
   rejected: 'Plan rejected by user',
 };

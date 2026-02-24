@@ -1,6 +1,6 @@
 import mongoose, { Schema, type Document } from 'mongoose';
 import type { BuilderJob, BuilderJobStatus } from '../schemas/builder.schema.js';
-import { BuilderJobStatusEnum } from '../schemas/builder.schema.js';
+import { BuilderJobStatusEnum, TaskTypeEnum } from '../schemas/builder.schema.js';
 
 export interface BuilderJobDocument extends Omit<BuilderJob, 'id'>, Document {
   status: BuilderJobStatus;
@@ -29,6 +29,33 @@ const planSchema = new Schema(
   {
     files: { type: [planFileSchema], required: true },
     summary: { type: String, required: true },
+    taskType: { type: String, enum: TaskTypeEnum.options },
+    contextFiles: { type: [String] },
+  },
+  { _id: false }
+);
+
+const diffSchema = new Schema(
+  {
+    path: { type: String, required: true },
+    diff: { type: String, required: true },
+  },
+  { _id: false }
+);
+
+const planCoverageSchema = new Schema(
+  {
+    planned: { type: [String], required: true },
+    generated: { type: [String], required: true },
+    missing: { type: [String], required: true },
+  },
+  { _id: false }
+);
+
+const tokenUsageSchema = new Schema(
+  {
+    input: { type: Number, required: true },
+    output: { type: Number, required: true },
   },
   { _id: false }
 );
@@ -40,6 +67,11 @@ const jobResultSchema = new Schema(
     prNumber: Number,
     branch: String,
     validationPassed: Boolean,
+    validationErrors: { type: [String] },
+    tokenUsage: { type: tokenUsageSchema },
+    diffs: { type: [diffSchema] },
+    planCoverage: { type: planCoverageSchema },
+    impactedFiles: { type: [String] },
   },
   { _id: false }
 );
@@ -71,6 +103,7 @@ const builderJobSchema = new Schema<BuilderJobDocument>(
       targetTag: String,
       includeModel: { type: Boolean, default: true },
       includeTests: { type: Boolean, default: true },
+      taskType: { type: String, enum: TaskTypeEnum.options },
     },
     plan: { type: planSchema, default: undefined },
     result: { type: jobResultSchema },
