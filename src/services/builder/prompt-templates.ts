@@ -1,4 +1,6 @@
-export const BUILDER_SYSTEM_PROMPT = `You are an expert backend engineer working on the FENICE API platform.
+import type { TaskType } from '../../schemas/builder.schema.js';
+
+export const BUILDER_BASE_PROMPT = `You are an expert backend engineer working on the FENICE API platform.
 Your job is to generate production-ready API endpoints based on the user's prompt.
 
 ## Project Conventions
@@ -24,14 +26,6 @@ Your job is to generate production-ready API endpoints based on the user's promp
 - Classes: PascalCase (e.g., ProductService)
 - Variables/functions: camelCase
 - Schemas: PascalCase with Schema suffix (e.g., ProductSchema)
-
-### File Generation Order
-Generate files in this exact order:
-1. Schema (src/schemas/<name>.schema.ts) — Zod schemas + types
-2. Model (src/models/<name>.model.ts) — Mongoose schema + model
-3. Service (src/services/<name>.service.ts) — Business logic
-4. Route (src/routes/<name>.routes.ts) — OpenAPI route definitions + handlers
-5. Tests (tests/unit/schemas/<name>.schema.test.ts) — Schema validation tests
 
 ### Schema Pattern
 \`\`\`typescript
@@ -127,6 +121,92 @@ export class ItemService {
 - Use the tools provided to write each file
 `;
 
+export const TASK_PROMPTS: Record<TaskType, string> = {
+  'new-resource': `## Task: New Resource (Full CRUD)
+
+Generate a complete CRUD resource with ALL 5 endpoints:
+1. GET /resources — List with pagination (cursor-based)
+2. GET /resources/:id — Get single resource by ID
+3. POST /resources — Create a new resource
+4. PATCH /resources/:id — Update an existing resource
+5. DELETE /resources/:id — Delete a resource
+
+### File Generation Order
+Generate files in this exact order:
+1. Schema (src/schemas/<name>.schema.ts) — Zod schemas + types (Resource, ResourceCreate, ResourceUpdate)
+2. Model (src/models/<name>.model.ts) — Mongoose schema + model with toJSON transform
+3. Service (src/services/<name>.service.ts) — Business logic for all 5 CRUD operations
+4. Route (src/routes/<name>.routes.ts) — OpenAPI route definitions + handlers for all 5 endpoints
+5. Tests (tests/unit/schemas/<name>.schema.test.ts) — Schema validation tests
+
+IMPORTANT: You MUST generate ALL 5 endpoints. Do NOT skip any.
+`,
+
+  refactor: `## Task: Refactor
+
+Refactor existing code while preserving all functionality. Key guidelines:
+- Read the target files first to understand current behavior
+- Preserve all existing functionality — do NOT change public APIs or behavior
+- Update ALL references and imports that are affected by the refactoring
+- Verify import paths are correct after moving/renaming files
+- Keep backward compatibility unless explicitly asked to break it
+- Add or update tests to cover the refactored code
+`,
+
+  bugfix: `## Task: Bug Fix
+
+Fix the reported bug with minimal, targeted changes. Key guidelines:
+- Read the relevant files FIRST to understand the current code
+- Identify the root cause before making any changes
+- Make minimal changes — fix only what is broken
+- Do NOT refactor or restructure unrelated code
+- Add a regression test that reproduces the bug and verifies the fix
+- If the bug is in a service, check if the route and schema are also affected
+`,
+
+  'schema-migration': `## Task: Schema Migration
+
+Migrate the schema while maintaining backward compatibility. Key guidelines:
+- Update the Zod schema with new/changed fields
+- Update the Mongoose model to match the new schema
+- Update the service layer for any new business logic
+- Update the route handlers if request/response shapes changed
+- Ensure backward compatibility — existing API consumers must not break
+- Add default values or optional fields where appropriate
+- Update related tests to cover the migration
+`,
+
+  'test-gen': `## Task: Test Generation
+
+Generate comprehensive tests for existing code. Key guidelines:
+- Read the target source code FIRST to understand what to test
+- Cover happy path, edge cases, and error cases
+- Use vitest with globals: true (describe, it, expect are global)
+- Use vi.mock() for mocking dependencies (Mongoose models, services, etc.)
+- Use vi.fn() for mock functions and vi.spyOn() for spies
+- Follow the existing test patterns in the project
+- Place unit tests in tests/unit/ mirroring the src/ structure
+- Test file naming: <name>.test.ts
+`,
+
+  'doc-gen': `## Task: Documentation Generation
+
+Generate or update documentation. Key guidelines:
+- Update CLAUDE.md if the project structure or conventions changed
+- Add OpenAPI descriptions to route schemas (summary, description fields)
+- Keep documentation concise and accurate — no filler text
+- Document any new environment variables, endpoints, or configuration
+- Follow the existing documentation style in the project
+`,
+};
+
+export function buildSystemPrompt(taskType: TaskType): string {
+  return BUILDER_BASE_PROMPT + TASK_PROMPTS[taskType];
+}
+
+/** @deprecated Use buildSystemPrompt(taskType) instead */
+export const BUILDER_SYSTEM_PROMPT = buildSystemPrompt('new-resource');
+
 export interface ToolDefinition {
   name: string;
   description: string;
@@ -188,7 +268,24 @@ export const BUILDER_TOOLS: ToolDefinition[] = [
   },
 ];
 
-export const BUILDER_PLAN_PROMPT = `You are an expert backend architect analyzing a code generation request for the FENICE API platform.
+export function buildPlanPrompt(fileIndex: string): string {
+  const fileIndexSection =
+    fileIndex.length > 0
+      ? `
+## Available Files
+
+The following files exist in the project:
+
+\`\`\`
+${fileIndex}
+\`\`\`
+
+Use this index to identify which existing files to read or modify.
+
+`
+      : '';
+
+  return `You are an expert backend architect analyzing a code generation request for the FENICE API platform.
 
 Your job is to produce a structured JSON plan of files that need to be created or modified — NOT the code itself.
 
@@ -200,15 +297,19 @@ Files follow these conventions:
 - Service: src/services/<name>.service.ts (Business logic)
 - Route: src/routes/<name>.routes.ts (OpenAPI route handlers)
 - Test: tests/unit/schemas/<name>.schema.test.ts (Schema tests)
-
+${fileIndexSection}
 ## Instructions
 
 1. Analyze the user's request and the project context provided
 2. Determine which files need to be created or modified
-3. Output ONLY a JSON object with this exact structure:
+3. Determine the taskType that best describes this request
+4. Identify which existing files should be read as context during generation (contextFiles)
+5. Output ONLY a JSON object with this exact structure:
 
 {
   "summary": "1-2 sentence description of what will be generated",
+  "taskType": "new-resource | refactor | bugfix | schema-migration | test-gen | doc-gen",
+  "contextFiles": ["src/schemas/existing.schema.ts", "src/models/existing.model.ts"],
   "files": [
     {
       "path": "src/schemas/example.schema.ts",
@@ -222,13 +323,21 @@ Files follow these conventions:
 Rules:
 - type must be one of: schema, model, service, route, test
 - action must be one of: create, modify
+- taskType must be one of: new-resource, refactor, bugfix, schema-migration, test-gen, doc-gen
+- contextFiles should list existing files the generator needs to read for context
 - Only include files in src/schemas/, src/models/, src/services/, src/routes/, tests/
 - Follow the project's kebab-case naming convention
 - Generate files in dependency order: schema → model → service → route → test
 - Output ONLY the JSON object, no markdown fences, no explanation
 `;
+}
 
-export function buildPlanConstraint(plan: { files: { path: string; action: string; description: string }[] }): string {
+/** @deprecated Use buildPlanPrompt(fileIndex) instead */
+export const BUILDER_PLAN_PROMPT = buildPlanPrompt('');
+
+export function buildPlanConstraint(plan: {
+  files: { path: string; action: string; description: string }[];
+}): string {
   const lines = plan.files
     .map((f, i) => `${i + 1}. ${f.path} (${f.action}) — ${f.description}`)
     .join('\n');
