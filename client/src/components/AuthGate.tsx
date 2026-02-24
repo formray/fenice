@@ -52,7 +52,7 @@ export function AuthGate({ position }: AuthGateProps): React.JSX.Element {
   useFrame(({ clock }) => {
     if (!meshRef.current) return;
     const mat = meshRef.current.material;
-    if (!(mat instanceof THREE.MeshStandardMaterial)) return;
+    if (!(mat instanceof THREE.MeshPhysicalMaterial)) return;
 
     if (authGate.open) {
       const pulse = 0.35 + 0.25 * Math.sin(clock.elapsedTime * 2.5);
@@ -79,12 +79,14 @@ export function AuthGate({ position }: AuthGateProps): React.JSX.Element {
     <group>
       <mesh ref={meshRef} position={[position.x, 2.0, position.z]}>
         <octahedronGeometry args={[1.5, 0]} />
-        <meshStandardMaterial
+        <meshPhysicalMaterial
           color={linkStyle.hex}
           emissive={linkStyle.hex}
           emissiveIntensity={authGate.open ? 0.5 : 0.1}
-          roughness={0.3}
-          metalness={0.4}
+          roughness={0.2}
+          metalness={0.5}
+          clearcoat={1.0}
+          clearcoatRoughness={0.05}
           transparent
           opacity={authGate.open ? 1.0 : 0.4}
         />
