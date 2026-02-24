@@ -328,11 +328,16 @@ export class BuilderService {
         // Level 2: Draft PR (still useful code, needs manual fixes)
         logger.warn({ jobId }, 'Repair exhausted, creating draft PR');
 
+        // Clean up the original builder branch before creating draft
+        await cleanupBranch(projectRoot, branch);
+
+        // Re-write the latest (potentially repaired) files and create draft branch
+        const draftPaths = await writeGeneratedFiles(projectRoot, currentFiles);
         const { branch: draftBranch } = await createDraftBranchAndCommit(
           projectRoot,
           jobId,
           prompt,
-          writtenPaths
+          draftPaths
         );
         const github = this.getGitHubConfig();
         await pushBranch(projectRoot, draftBranch);

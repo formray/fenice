@@ -24,7 +24,7 @@ vi.mock('simple-git', () => ({
   simpleGit: () => createMockGit(),
 }));
 
-const { createBranchAndCommit, pushBranch, cleanupBranch } =
+const { createBranchAndCommit, createDraftBranchAndCommit, pushBranch, cleanupBranch } =
   await import('../../../../src/services/builder/git-ops.js');
 
 describe('git-ops', () => {
@@ -79,6 +79,46 @@ describe('git-ops', () => {
       // Branch slug should be max 40 chars
       const slug = result.branch.replace('builder/job-123-', '');
       expect(slug.length).toBeLessThanOrEqual(40);
+    });
+  });
+
+  describe('createDraftBranchAndCommit', () => {
+    it('should create a branch with draft/ prefix', async () => {
+      const result = await createDraftBranchAndCommit('/project', 'job-456', 'Fix auth bug', [
+        'src/services/auth.service.ts',
+      ]);
+
+      expect(result.branch).toMatch(/^draft\/job-456-fix-auth-bug$/);
+      expect(result.commitHash).toBe('abc123');
+      expect(mockCheckoutLocalBranch).toHaveBeenCalledWith(result.branch);
+    });
+
+    it('should stage all provided files', async () => {
+      const files = ['src/schemas/product.schema.ts', 'src/models/product.model.ts'];
+      await createDraftBranchAndCommit('/project', 'job-456', 'Fix products', files);
+
+      expect(mockAdd).toHaveBeenCalledWith(files);
+    });
+
+    it('should commit with draft prefix and validation note', async () => {
+      await createDraftBranchAndCommit('/project', 'job-456', 'Fix auth bug', [
+        'src/services/auth.service.ts',
+      ]);
+
+      const commitMsg = mockCommit.mock.calls[0]?.[0] as string;
+      expect(commitMsg).toContain('draft(builder):');
+      expect(commitMsg).toContain('Fix auth bug');
+      expect(commitMsg).toContain('NOTE: Validation failed');
+      expect(commitMsg).toContain('Co-Authored-By: Claude Opus 4.6');
+      expect(commitMsg).toContain('job-456');
+    });
+
+    it('should truncate long prompts in commit message', async () => {
+      const longPrompt = 'B'.repeat(100);
+      await createDraftBranchAndCommit('/project', 'job-456', longPrompt, ['file.ts']);
+
+      const commitMsg = mockCommit.mock.calls[0]?.[0] as string;
+      expect(commitMsg).toContain('...');
     });
   });
 
