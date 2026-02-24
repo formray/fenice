@@ -6,6 +6,7 @@ import type { ServiceStarLayout } from '../services/cosmos-layout.service';
 import { SERVICE_STAR } from '../utils/cosmos';
 import { METHOD_COLORS } from '../utils/colors';
 import { useWorldStore } from '../stores/world.store';
+import { useCosmosSettingsStore } from '../stores/cosmos-settings.store';
 
 /** Create a procedural radial glow texture. */
 function createGlowTexture(color: string): THREE.CanvasTexture {
@@ -33,6 +34,9 @@ interface ServiceStarProps {
 export function ServiceStar({ star }: ServiceStarProps): React.JSX.Element {
   const groupRef = useRef<THREE.Group>(null);
   const endpoints = useWorldStore((s) => s.endpoints);
+  const coreRadius = useCosmosSettingsStore((s) => s.starCoreRadius);
+  const emissiveIntensity = useCosmosSettingsStore((s) => s.starEmissiveIntensity);
+  const glowScale = useCosmosSettingsStore((s) => s.starGlowScale);
 
   // Determine star color from the dominant method of its endpoints
   const starColor = useMemo(() => {
@@ -42,6 +46,7 @@ export function ServiceStar({ star }: ServiceStarProps): React.JSX.Element {
   }, [endpoints, star.serviceId]);
 
   const glowTexture = useMemo(() => createGlowTexture(starColor), [starColor]);
+  const coronaTexture = useMemo(() => createGlowTexture(starColor), [starColor]);
 
   // Gentle pulse animation
   useFrame(({ clock }) => {
@@ -57,18 +62,18 @@ export function ServiceStar({ star }: ServiceStarProps): React.JSX.Element {
     <group ref={groupRef} position={[star.position.x, star.position.y, star.position.z]}>
       {/* Core star sphere */}
       <mesh>
-        <sphereGeometry args={[SERVICE_STAR.coreRadius, 32, 32]} />
+        <sphereGeometry args={[coreRadius, 32, 32]} />
         <meshPhysicalMaterial
           color={starColor}
           emissive={starColor}
-          emissiveIntensity={SERVICE_STAR.emissiveIntensity}
+          emissiveIntensity={emissiveIntensity}
           roughness={SERVICE_STAR.roughness}
           metalness={SERVICE_STAR.metalness}
         />
       </mesh>
 
       {/* Large glow sprite */}
-      <sprite scale={[SERVICE_STAR.glowScale, SERVICE_STAR.glowScale, 1]}>
+      <sprite scale={[glowScale, glowScale, 1]}>
         <spriteMaterial
           map={glowTexture}
           transparent
@@ -81,7 +86,7 @@ export function ServiceStar({ star }: ServiceStarProps): React.JSX.Element {
       {/* Corona sprite (smaller, brighter) */}
       <sprite scale={[SERVICE_STAR.coronaScale, SERVICE_STAR.coronaScale, 1]}>
         <spriteMaterial
-          color={starColor}
+          map={coronaTexture}
           transparent
           opacity={SERVICE_STAR.coronaOpacity}
           blending={THREE.AdditiveBlending}
@@ -93,7 +98,7 @@ export function ServiceStar({ star }: ServiceStarProps): React.JSX.Element {
       <pointLight color={starColor} intensity={1.0} distance={20} decay={2} />
 
       {/* Label */}
-      <Html center occlude={false} position={[0, SERVICE_STAR.coreRadius + 1.2, 0]}>
+      <Html center occlude={false} position={[0, coreRadius + 1.2, 0]}>
         <div
           style={{
             pointerEvents: 'none',

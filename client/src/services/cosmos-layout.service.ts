@@ -36,13 +36,26 @@ export interface CosmosLayout {
 
 // ── Computation ────────────────────────────────────────────────────────────
 
+export interface CosmosLayoutOverrides {
+  innerRingRadius?: number | undefined;
+  outerRingRadius?: number | undefined;
+  planetMinSize?: number | undefined;
+  planetMaxSize?: number | undefined;
+}
+
 export function computeCosmosLayout(
   services: WorldService[],
-  endpoints: WorldEndpoint[]
+  endpoints: WorldEndpoint[],
+  overrides?: CosmosLayoutOverrides | undefined
 ): CosmosLayout {
   if (services.length === 0) {
     return { stars: [], planets: [], wormholePosition: { x: 0, y: 0, z: 0 } };
   }
+
+  const innerRadius = overrides?.innerRingRadius ?? COSMOS_LAYOUT.innerRingRadius;
+  const outerRadius = overrides?.outerRingRadius ?? COSMOS_LAYOUT.outerRingRadius;
+  const minSize = overrides?.planetMinSize ?? ENDPOINT_PLANET.minSize;
+  const maxSize = overrides?.planetMaxSize ?? ENDPOINT_PLANET.maxSize;
 
   // Group endpoints by service
   const endpointsByService = new Map<string, WorldEndpoint[]>();
@@ -64,22 +77,10 @@ export function computeCosmosLayout(
   const stars: ServiceStarLayout[] = [];
 
   // Place protected services on inner ring
-  placeServicesOnRing(
-    protectedServices,
-    COSMOS_LAYOUT.innerRingRadius,
-    'protected-core',
-    endpointsByService,
-    stars
-  );
+  placeServicesOnRing(protectedServices, innerRadius, 'protected-core', endpointsByService, stars);
 
   // Place public services on outer ring
-  placeServicesOnRing(
-    publicServices,
-    COSMOS_LAYOUT.outerRingRadius,
-    'public-perimeter',
-    endpointsByService,
-    stars
-  );
+  placeServicesOnRing(publicServices, outerRadius, 'public-perimeter', endpointsByService, stars);
 
   // Place endpoint planets
   const planets: EndpointPlanetLayout[] = [];
@@ -93,11 +94,8 @@ export function computeCosmosLayout(
         ENDPOINT_PLANET.baseOrbitSpeed +
         (seededRandom(ep.id, 0) - 0.5) * ENDPOINT_PLANET.orbitSpeedVariance * 2;
       const paramCount = ep.parameterCount;
-      const sizeRange = ENDPOINT_PLANET.maxSize - ENDPOINT_PLANET.minSize;
-      const size = Math.min(
-        ENDPOINT_PLANET.minSize + (paramCount / 10) * sizeRange,
-        ENDPOINT_PLANET.maxSize
-      );
+      const sizeRange = maxSize - minSize;
+      const size = Math.min(minSize + (paramCount / 10) * sizeRange, maxSize);
 
       planets.push({
         endpointId: ep.id,

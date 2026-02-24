@@ -16,9 +16,9 @@ export const SCENE_FOG = {
 } as const;
 
 export const BLOOM_CONFIG = {
-  intensity: 1.4,
-  luminanceThreshold: 0.2,
-  luminanceSmoothing: 0.9,
+  intensity: 1.0,
+  luminanceThreshold: 0.45,
+  luminanceSmoothing: 0.8,
   mipmapBlur: true,
 } as const;
 
@@ -56,11 +56,11 @@ export const NEBULA_CONFIG = {
 export const DUST_CONFIG = {
   count: 600,
   spread: 60,
-  minSize: 0.05,
-  maxSize: 0.25,
+  minSize: 0.02,
+  maxSize: 0.1,
   driftSpeed: 0.15,
   color: '#e0f0ff',
-  opacity: 0.2,
+  opacity: 0.15,
 } as const;
 
 export const BUILDING_MATERIAL = {

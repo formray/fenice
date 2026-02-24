@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import { computeCosmosLayout, computeOrbitPoint } from '../services/cosmos-layout.service';
 import type { CosmosLayout } from '../services/cosmos-layout.service';
 import type { WorldService, WorldEndpoint } from '../types/world';
+import { ENDPOINT_PLANET } from '../utils/cosmos';
 
 const SERVICES: WorldService[] = [
   { id: 'auth-svc', tag: 'Auth', endpointCount: 2 },
@@ -135,8 +136,8 @@ describe('computeCosmosLayout', () => {
 
   it('planet sizes are within configured range', () => {
     for (const planet of layout.planets) {
-      expect(planet.size).toBeGreaterThanOrEqual(0.3);
-      expect(planet.size).toBeLessThanOrEqual(0.8);
+      expect(planet.size).toBeGreaterThanOrEqual(ENDPOINT_PLANET.minSize);
+      expect(planet.size).toBeLessThanOrEqual(ENDPOINT_PLANET.maxSize);
     }
   });
 

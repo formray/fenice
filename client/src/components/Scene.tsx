@@ -9,6 +9,7 @@ import {
   Noise,
 } from '@react-three/postprocessing';
 import { BlendFunction } from 'postprocessing';
+import { City } from './City';
 import { Cosmos } from './Cosmos';
 import { CameraController } from './CameraController';
 import { CAMERA_NAV } from '../utils/cosmos';
@@ -19,12 +20,12 @@ import { useViewStore } from '../stores/view.store';
 import {
   COSMIC_PALETTE,
   SCENE_FOG,
-  BLOOM_CONFIG,
   VIGNETTE_CONFIG,
   CHROMATIC_ABERRATION_CONFIG,
   NOISE_CONFIG,
   COSMIC_LIGHTING,
 } from '../utils/atmosphere';
+import { useCosmosSettingsStore } from '../stores/cosmos-settings.store';
 
 const SCENE_THEME = {
   dark: {
@@ -48,15 +49,18 @@ const SCENE_THEME = {
 } as const;
 
 function SceneEffects({ isDark }: { isDark: boolean }): React.JSX.Element | null {
+  const bloomIntensity = useCosmosSettingsStore((s) => s.bloomIntensity);
+  const bloomThreshold = useCosmosSettingsStore((s) => s.bloomThreshold);
+
   if (!isDark) return null;
 
   return (
     <EffectComposer>
       <Bloom
-        intensity={BLOOM_CONFIG.intensity}
-        luminanceThreshold={BLOOM_CONFIG.luminanceThreshold}
-        luminanceSmoothing={BLOOM_CONFIG.luminanceSmoothing}
-        mipmapBlur={BLOOM_CONFIG.mipmapBlur}
+        intensity={bloomIntensity}
+        luminanceThreshold={bloomThreshold}
+        luminanceSmoothing={0.8}
+        mipmapBlur
       />
       <Vignette offset={VIGNETTE_CONFIG.offset} darkness={VIGNETTE_CONFIG.darkness} />
       <ChromaticAberration
@@ -68,17 +72,27 @@ function SceneEffects({ isDark }: { isDark: boolean }): React.JSX.Element | null
   );
 }
 
+const TRON_CAMERA = {
+  position: [0, 22, 28] as [number, number, number],
+  fov: 50,
+} as const;
+
 export function Scene(): React.JSX.Element {
   const visualMode = useViewStore((s) => s.visualMode);
   const showGrid = useViewStore((s) => s.showGrid);
+  const sceneMode = useViewStore((s) => s.sceneMode);
   const sceneTheme = SCENE_THEME[visualMode];
   const isDark = visualMode === 'dark';
+  const isCosmos = sceneMode === 'cosmos';
+
+  const cameraPosition = isCosmos ? CAMERA_NAV.defaultPosition : TRON_CAMERA.position;
+  const cameraFov = isCosmos ? 60 : TRON_CAMERA.fov;
 
   return (
     <Canvas
       camera={{
-        position: CAMERA_NAV.defaultPosition,
-        fov: 60,
+        position: cameraPosition,
+        fov: cameraFov,
         near: 0.1,
         far: 500,
       }}
@@ -103,27 +117,30 @@ export function Scene(): React.JSX.Element {
         color={isDark ? COSMIC_LIGHTING.keyLightColor : '#ffffff'}
       />
       <directionalLight position={[-10, 15, -10]} intensity={sceneTheme.fillLight} />
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
-        <planeGeometry args={[200, 200]} />
-        <meshStandardMaterial color={sceneTheme.groundColor} roughness={1} />
-      </mesh>
+      {/* Ground plane for Tron City mode or light theme */}
+      {(!isDark || !isCosmos) && (
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
+          <planeGeometry args={[200, 200]} />
+          <meshStandardMaterial color={sceneTheme.groundColor} roughness={1} />
+        </mesh>
+      )}
       {showGrid && (
         <gridHelper
           args={[60, 60, sceneTheme.gridMajor, sceneTheme.gridMinor]}
           position={[0, 0.002, 0]}
         />
       )}
-      <Cosmos />
+      {isCosmos ? <Cosmos /> : <City />}
       <OrbitControls
         makeDefault
         enableDamping
         dampingFactor={CAMERA_NAV.dampingFactor}
-        autoRotate
+        autoRotate={isCosmos}
         autoRotateSpeed={CAMERA_NAV.autoRotateSpeed}
         minDistance={CAMERA_NAV.minDistance}
         maxDistance={CAMERA_NAV.maxDistance}
       />
-      <CameraController />
+      {isCosmos && <CameraController />}
       <SceneEffects isDark={isDark} />
     </Canvas>
   );

@@ -9,14 +9,28 @@ import { CurvedRoute } from './CurvedRoute';
 import { Wormhole } from './Wormhole';
 import { METHOD_COLORS, LINK_STATE_COLORS } from '../utils/colors';
 import { seededRandom, COSMOS_LAYOUT } from '../utils/cosmos';
+import { useCosmosSettingsStore } from '../stores/cosmos-settings.store';
 
 export function Cosmos(): React.JSX.Element | null {
   const services = useWorldStore((s) => s.services);
   const endpoints = useWorldStore((s) => s.endpoints);
   const edges = useWorldStore((s) => s.edges);
   const endpointSemantics = useWorldStore((s) => s.endpointSemantics);
+  const innerRingRadius = useCosmosSettingsStore((s) => s.innerRingRadius);
+  const outerRingRadius = useCosmosSettingsStore((s) => s.outerRingRadius);
+  const planetMinSize = useCosmosSettingsStore((s) => s.planetMinSize);
+  const planetMaxSize = useCosmosSettingsStore((s) => s.planetMaxSize);
 
-  const layout = useMemo(() => computeCosmosLayout(services, endpoints), [services, endpoints]);
+  const layout = useMemo(
+    () =>
+      computeCosmosLayout(services, endpoints, {
+        innerRingRadius,
+        outerRingRadius,
+        planetMinSize,
+        planetMaxSize,
+      }),
+    [services, endpoints, innerRingRadius, outerRingRadius, planetMinSize, planetMaxSize]
+  );
 
   const endpointMap = useMemo(() => new Map(endpoints.map((e) => [e.id, e])), [endpoints]);
 
@@ -100,6 +114,19 @@ export function Cosmos(): React.JSX.Element | null {
         if (!endpoint) return null;
         return <EndpointPlanet key={planet.endpointId} planet={planet} endpoint={endpoint} />;
       })}
+
+      {/* Backbone routes: wormhole → each service star (subtle ethereal links) */}
+      {layout.stars.map((star) => (
+        <CurvedRoute
+          key={`backbone-${star.serviceId}`}
+          from={layout.wormholePosition}
+          to={star.position}
+          color={star.zone === 'protected-core' ? '#00e5ff' : '#4a6fa5'}
+          opacity={0.12}
+          tubeRadius={0.015}
+          pulseSize={0.08}
+        />
+      ))}
 
       {/* Inter-service curved routes */}
       {serviceRoutes.map((route, i) => (

@@ -2,6 +2,7 @@
 import { useRef, useMemo } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
+import { Html } from '@react-three/drei';
 import type { CosmosPosition } from '../services/cosmos-layout.service';
 import { useWorldStore } from '../stores/world.store';
 import { LINK_STATE_COLORS } from '../utils/colors';
@@ -37,6 +38,7 @@ export function Wormhole({ position }: WormholeProps): React.JSX.Element {
   const linkStyle = LINK_STATE_COLORS[authGate.linkState];
 
   const portalTexture = useMemo(() => createPortalTexture(linkStyle.hex), [linkStyle.hex]);
+  const glowTexture = useMemo(() => createPortalTexture(linkStyle.hex), [linkStyle.hex]);
 
   useFrame(({ clock }) => {
     // Ring rotation
@@ -94,15 +96,33 @@ export function Wormhole({ position }: WormholeProps): React.JSX.Element {
       </mesh>
 
       {/* Glow sprite */}
-      <sprite scale={[10, 10, 1]}>
+      <sprite scale={[6, 6, 1]}>
         <spriteMaterial
-          color={linkStyle.hex}
+          map={glowTexture}
           transparent
-          opacity={authGate.open ? 0.2 : 0.05}
+          opacity={authGate.open ? 0.15 : 0.05}
           blending={THREE.AdditiveBlending}
           depthWrite={false}
         />
       </sprite>
+
+      {/* Label */}
+      <Html center occlude={false} position={[0, WORMHOLE.ringRadius + 1.0, 0]}>
+        <div
+          style={{
+            pointerEvents: 'none',
+            fontSize: '14px',
+            fontWeight: 700,
+            color: '#00e5ff',
+            textShadow: '0 0 12px rgba(0,229,255,0.6), 0 0 4px rgba(0,0,0,0.9)',
+            whiteSpace: 'nowrap',
+            letterSpacing: '2px',
+            textTransform: 'uppercase',
+          }}
+        >
+          Gateway
+        </div>
+      </Html>
 
       {/* Point light */}
       <pointLight

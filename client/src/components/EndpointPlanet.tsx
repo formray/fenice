@@ -10,6 +10,7 @@ import { METHOD_COLORS, LINK_STATE_COLORS } from '../utils/colors';
 import { useSelectionStore } from '../stores/selection.store';
 import { useWorldStore } from '../stores/world.store';
 import { useViewStore } from '../stores/view.store';
+import { useCosmosSettingsStore } from '../stores/cosmos-settings.store';
 
 interface EndpointPlanetProps {
   planet: EndpointPlanetLayout;
@@ -48,6 +49,7 @@ export function EndpointPlanet({ planet, endpoint }: EndpointPlanetProps): React
   const setSelected = useSelectionStore((s) => s.setSelected);
   const semantics = useWorldStore((s) => s.endpointSemantics[endpoint.id]);
   const setFocusTarget = useViewStore((s) => s.setFocusTarget);
+  const orbitSpeedMultiplier = useCosmosSettingsStore((s) => s.orbitSpeed);
 
   const isSelected = selectedId === endpoint.id;
   const methodColor = METHOD_COLORS[endpoint.method];
@@ -79,7 +81,8 @@ export function EndpointPlanet({ planet, endpoint }: EndpointPlanetProps): React
   // Orbit + self-rotation animation
   useFrame(({ clock }) => {
     if (!groupRef.current || !meshRef.current) return;
-    const t = clock.elapsedTime * planet.orbitSpeed + planet.orbitPhase;
+    const speedRatio = orbitSpeedMultiplier / ENDPOINT_PLANET.baseOrbitSpeed;
+    const t = clock.elapsedTime * planet.orbitSpeed * speedRatio + planet.orbitPhase;
 
     // Tilted orbit position
     const xOrbit = Math.cos(t) * planet.orbitRadius;

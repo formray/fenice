@@ -3,7 +3,7 @@ import { useViewStore } from '../stores/view.store';
 import { METHOD_COLORS, METHOD_LABELS, LINK_STATE_COLORS } from '../utils/colors';
 import type { HttpMethod } from '../types/world';
 import type { LinkState } from '../types/semantic';
-import type { RouteLayerMode } from '../stores/view.store';
+import type { RouteLayerMode, SceneMode } from '../stores/view.store';
 
 const LEGEND_METHODS: HttpMethod[] = ['get', 'post', 'put', 'patch', 'delete'];
 
@@ -18,6 +18,11 @@ const ROUTE_LAYER_OPTIONS: Array<{ mode: RouteLayerMode; label: string }> = [
   { mode: 'city', label: 'City Corridors' },
   { mode: 'debug', label: 'Endpoint Debug' },
   { mode: 'both', label: 'Both' },
+];
+
+const SCENE_MODE_OPTIONS: Array<{ mode: SceneMode; label: string }> = [
+  { mode: 'cosmos', label: 'Cosmos' },
+  { mode: 'tron', label: 'Tron City' },
 ];
 
 const HUD_THEME = {
@@ -52,7 +57,10 @@ export function HUD(): React.JSX.Element {
   const toggleVisualMode = useViewStore((s) => s.toggleVisualMode);
   const routeLayerMode = useViewStore((s) => s.routeLayerMode);
   const setRouteLayerMode = useViewStore((s) => s.setRouteLayerMode);
+  const sceneMode = useViewStore((s) => s.sceneMode);
+  const setSceneMode = useViewStore((s) => s.setSceneMode);
   const theme = HUD_THEME[visualMode];
+  const isCosmos = sceneMode === 'cosmos';
 
   return (
     <div
@@ -65,7 +73,7 @@ export function HUD(): React.JSX.Element {
         userSelect: 'none',
       }}
     >
-      <div style={{ marginBottom: '12px', pointerEvents: 'auto' }}>
+      <div style={{ marginBottom: '12px', pointerEvents: 'auto', display: 'flex', gap: '6px' }}>
         <button
           type="button"
           onClick={toggleVisualMode}
@@ -88,6 +96,30 @@ export function HUD(): React.JSX.Element {
         >
           Theme: {visualMode === 'dark' ? 'Dark' : 'Light'}
         </button>
+        {SCENE_MODE_OPTIONS.map((option) => {
+          const active = option.mode === sceneMode;
+          return (
+            <button
+              key={option.mode}
+              type="button"
+              onClick={() => setSceneMode(option.mode)}
+              style={{
+                border: `1px solid ${active ? '#00e5ff' : theme.buttonBorder}`,
+                backgroundColor: active ? 'rgba(0, 229, 255, 0.15)' : theme.buttonBg,
+                color: theme.buttonText,
+                borderRadius: '999px',
+                padding: '6px 10px',
+                fontSize: '11px',
+                fontWeight: active ? 700 : 500,
+                letterSpacing: '0.3px',
+                cursor: 'pointer',
+                boxShadow: active ? '0 0 10px rgba(0, 229, 255, 0.2)' : 'none',
+              }}
+            >
+              {option.label}
+            </button>
+          );
+        })}
       </div>
 
       <div style={{ marginBottom: '10px', pointerEvents: 'auto' }}>
@@ -257,12 +289,22 @@ export function HUD(): React.JSX.Element {
               marginBottom: '4px',
             }}
           >
-            Planet Guide
+            {isCosmos ? 'Planet Guide' : 'Building Guide'}
           </div>
-          <div>Shape = HTTP method</div>
-          <div>Color = HTTP method</div>
-          <div>Size = parameter complexity</div>
-          <div>Glow = endpoint link state</div>
+          {isCosmos ? (
+            <>
+              <div>Shape = HTTP method</div>
+              <div>Color = HTTP method</div>
+              <div>Size = parameter complexity</div>
+              <div>Glow = endpoint link state</div>
+            </>
+          ) : (
+            <>
+              <div>Body color = HTTP method</div>
+              <div>Base ring = endpoint link state</div>
+              <div>Height = parameter complexity</div>
+            </>
+          )}
         </div>
 
         {/* Corridors legend */}
@@ -277,12 +319,23 @@ export function HUD(): React.JSX.Element {
           }}
         >
           <div style={{ textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
-            Routes
+            {isCosmos ? 'Routes' : 'Corridors'}
           </div>
-          <div>Curved routes connect service stars</div>
-          <div>Route color = link state of connected endpoints</div>
-          <div>Pulse = data flowing between services</div>
-          <div>Wormhole closed = routes dimmed</div>
+          {isCosmos ? (
+            <>
+              <div>Curved routes connect service stars</div>
+              <div>Route color = link state of connected endpoints</div>
+              <div>Pulse = data flowing between services</div>
+              <div>Wormhole closed = routes dimmed</div>
+            </>
+          ) : (
+            <>
+              <div>Radial roads from auth gate to protected services</div>
+              <div>Road color = worst link state of service endpoints</div>
+              <div>Flow markers = data flowing through the gate</div>
+              <div>Gate closed = all corridors blocked (red)</div>
+            </>
+          )}
         </div>
 
         {/* Routing hint legend */}

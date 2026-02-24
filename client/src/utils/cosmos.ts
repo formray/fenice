@@ -28,12 +28,12 @@ export const COSMOS_LAYOUT = {
 // ── Service star ───────────────────────────────────────────────────────────
 
 export const SERVICE_STAR = {
-  coreRadius: 1.2,
-  glowScale: 6,
-  glowOpacity: 0.35,
-  coronaScale: 3.5,
-  coronaOpacity: 0.15,
-  emissiveIntensity: 2.0,
+  coreRadius: 0.6,
+  glowScale: 3.5,
+  glowOpacity: 0.25,
+  coronaScale: 2.0,
+  coronaOpacity: 0.1,
+  emissiveIntensity: 0.8,
   pulseMin: 0.98,
   pulseMax: 1.02,
   pulseSpeed: 1.5,
@@ -44,14 +44,14 @@ export const SERVICE_STAR = {
 // ── Endpoint planet ────────────────────────────────────────────────────────
 
 export const ENDPOINT_PLANET = {
-  minSize: 0.3,
-  maxSize: 0.8,
+  minSize: 0.35,
+  maxSize: 0.7,
   baseOrbitSpeed: 0.15,
   orbitSpeedVariance: 0.05,
   selfRotationSpeed: 0.003,
   hoverScale: 1.3,
   wireframeOpacity: 0.15,
-  emissiveIntensity: 0.3,
+  emissiveIntensity: 0.5,
   metalness: 0.5,
   roughness: 0.25,
   clearcoat: 0.6,
@@ -83,14 +83,14 @@ export const CURVED_ROUTE = {
 // ── Wormhole (auth gate) ───────────────────────────────────────────────────
 
 export const WORMHOLE = {
-  ringRadius: 2.5,
-  tubeRadius: 0.3,
+  ringRadius: 2.2,
+  tubeRadius: 0.25,
   ringSegments: 64,
   ringRadialSegments: 16,
   rotationSpeed: 0.5,
-  portalRadius: 2.0,
-  portalOpacity: 0.15,
-  emissiveIntensity: 1.5,
+  portalRadius: 1.8,
+  portalOpacity: 0.12,
+  emissiveIntensity: 0.6,
   metalness: 0.7,
   roughness: 0.2,
   clearcoat: 1.0,
