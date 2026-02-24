@@ -41,6 +41,7 @@ export interface CosmosLayoutOverrides {
   outerRingRadius?: number | undefined;
   planetMinSize?: number | undefined;
   planetMaxSize?: number | undefined;
+  ySpread?: number | undefined;
 }
 
 export function computeCosmosLayout(
@@ -56,6 +57,7 @@ export function computeCosmosLayout(
   const outerRadius = overrides?.outerRingRadius ?? COSMOS_LAYOUT.outerRingRadius;
   const minSize = overrides?.planetMinSize ?? ENDPOINT_PLANET.minSize;
   const maxSize = overrides?.planetMaxSize ?? ENDPOINT_PLANET.maxSize;
+  const ySpread = overrides?.ySpread ?? COSMOS_LAYOUT.yVariance;
 
   // Group endpoints by service
   const endpointsByService = new Map<string, WorldEndpoint[]>();
@@ -77,10 +79,24 @@ export function computeCosmosLayout(
   const stars: ServiceStarLayout[] = [];
 
   // Place protected services on inner ring
-  placeServicesOnRing(protectedServices, innerRadius, 'protected-core', endpointsByService, stars);
+  placeServicesOnRing(
+    protectedServices,
+    innerRadius,
+    'protected-core',
+    endpointsByService,
+    ySpread,
+    stars
+  );
 
   // Place public services on outer ring
-  placeServicesOnRing(publicServices, outerRadius, 'public-perimeter', endpointsByService, stars);
+  placeServicesOnRing(
+    publicServices,
+    outerRadius,
+    'public-perimeter',
+    endpointsByService,
+    ySpread,
+    stars
+  );
 
   // Place endpoint planets
   const planets: EndpointPlanetLayout[] = [];
@@ -124,12 +140,13 @@ function placeServicesOnRing(
   ringRadius: number,
   zone: 'protected-core' | 'public-perimeter',
   endpointsByService: Map<string, WorldEndpoint[]>,
+  ySpread: number,
   out: ServiceStarLayout[]
 ): void {
   const count = Math.max(services.length, 1);
   services.forEach((service, i) => {
     const angle = (i / count) * Math.PI * 2;
-    const yOffset = (seededRandom(service.id, 0) - 0.5) * COSMOS_LAYOUT.yVariance * 2;
+    const yOffset = (seededRandom(service.id, 0) - 0.5) * ySpread * 2;
     const epCount = endpointsByService.get(service.id)?.length ?? 0;
     const orbitRadius = Math.min(
       COSMOS_LAYOUT.minOrbitRadius + epCount * COSMOS_LAYOUT.endpointOrbitGrowth,

@@ -72,6 +72,7 @@ const SLIDER_CONFIG: Array<{ group: string; sliders: SliderRowProps[] }> = [
     sliders: [
       { label: 'Inner Ring', field: 'innerRingRadius', min: 5, max: 30, step: 1 },
       { label: 'Outer Ring', field: 'outerRingRadius', min: 15, max: 50, step: 1 },
+      { label: 'Y Spread', field: 'ySpread', min: 0, max: 20, step: 0.5 },
     ],
   },
   {

@@ -20,6 +20,7 @@ export function Cosmos(): React.JSX.Element | null {
   const outerRingRadius = useCosmosSettingsStore((s) => s.outerRingRadius);
   const planetMinSize = useCosmosSettingsStore((s) => s.planetMinSize);
   const planetMaxSize = useCosmosSettingsStore((s) => s.planetMaxSize);
+  const ySpread = useCosmosSettingsStore((s) => s.ySpread);
 
   const layout = useMemo(
     () =>
@@ -28,8 +29,9 @@ export function Cosmos(): React.JSX.Element | null {
         outerRingRadius,
         planetMinSize,
         planetMaxSize,
+        ySpread,
       }),
-    [services, endpoints, innerRingRadius, outerRingRadius, planetMinSize, planetMaxSize]
+    [services, endpoints, innerRingRadius, outerRingRadius, planetMinSize, planetMaxSize, ySpread]
   );
 
   const endpointMap = useMemo(() => new Map(endpoints.map((e) => [e.id, e])), [endpoints]);

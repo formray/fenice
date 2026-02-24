@@ -6,6 +6,7 @@ export interface CosmosSettings {
   // Layout
   innerRingRadius: number;
   outerRingRadius: number;
+  ySpread: number;
   // Stars
   starCoreRadius: number;
   starEmissiveIntensity: number;
@@ -30,6 +31,7 @@ interface CosmosSettingsState extends CosmosSettings {
 const DEFAULTS: CosmosSettings = {
   innerRingRadius: COSMOS_LAYOUT.innerRingRadius,
   outerRingRadius: COSMOS_LAYOUT.outerRingRadius,
+  ySpread: COSMOS_LAYOUT.yVariance,
   starCoreRadius: SERVICE_STAR.coreRadius,
   starEmissiveIntensity: SERVICE_STAR.emissiveIntensity,
   starGlowScale: SERVICE_STAR.glowScale,

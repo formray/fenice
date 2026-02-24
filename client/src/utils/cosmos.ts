@@ -18,7 +18,7 @@ export function seededRandom(seed: string, index: number = 0): number {
 export const COSMOS_LAYOUT = {
   innerRingRadius: 15,
   outerRingRadius: 28,
-  yVariance: 3,
+  yVariance: 8,
   minOrbitRadius: 3,
   maxOrbitRadius: 8,
   endpointOrbitGrowth: 0.5,
