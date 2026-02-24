@@ -12,6 +12,7 @@ import {
 } from '../utils/colors';
 import { useSelectionStore } from '../stores/selection.store';
 import { useWorldStore } from '../stores/world.store';
+import { BUILDING_MATERIAL, WIREFRAME_OVERLAY } from '../utils/atmosphere';
 
 interface BuildingProps {
   layout: BuildingLayout;
@@ -55,16 +56,28 @@ export function Building({ layout, endpoint }: BuildingProps): React.JSX.Element
           document.body.style.cursor = 'auto';
         }}
       >
-        <meshStandardMaterial
+        <meshPhysicalMaterial
           color={baseColor}
-          emissive="#000000"
-          emissiveIntensity={0.02}
-          roughness={0.6}
-          metalness={0.1}
-          transparent={false}
-          opacity={1.0}
+          emissive={methodColor}
+          emissiveIntensity={BUILDING_MATERIAL.emissiveIntensity}
+          roughness={BUILDING_MATERIAL.roughness}
+          metalness={BUILDING_MATERIAL.metalness}
+          clearcoat={BUILDING_MATERIAL.clearcoat}
+          clearcoatRoughness={BUILDING_MATERIAL.clearcoatRoughness}
         />
       </RoundedBox>
+
+      {/* Wireframe overlay for sci-fi look */}
+      <mesh position={[layout.position.x, layout.height / 2, layout.position.z]}>
+        <boxGeometry args={[layout.width + 0.02, layout.height + 0.02, layout.depth + 0.02]} />
+        <meshBasicMaterial
+          color={methodColor}
+          wireframe
+          transparent
+          opacity={WIREFRAME_OVERLAY.opacity}
+          depthWrite={false}
+        />
+      </mesh>
 
       {/* Link-state accent band near the base, slightly raised for camera readability */}
       <mesh position={[layout.position.x, accentBandY, layout.position.z]}>
