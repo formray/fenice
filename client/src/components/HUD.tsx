@@ -46,6 +46,16 @@ const HUD_THEME = {
     buttonBorder: '#9fb3df',
     buttonText: '#1f2f52',
   },
+  starChart: {
+    text: '#8ab4d8',
+    muted: '#5a7a9a',
+    divider: '#1a2d4d',
+    panelBg: 'rgba(8, 16, 32, 0.88)',
+    panelBorder: 'rgba(74, 142, 194, 0.25)',
+    buttonBg: 'rgba(10, 22, 40, 0.92)',
+    buttonBorder: 'rgba(74, 142, 194, 0.35)',
+    buttonText: '#8ab4d8',
+  },
 } as const;
 
 export function HUD(): React.JSX.Element {
@@ -59,8 +69,9 @@ export function HUD(): React.JSX.Element {
   const setRouteLayerMode = useViewStore((s) => s.setRouteLayerMode);
   const sceneMode = useViewStore((s) => s.sceneMode);
   const setSceneMode = useViewStore((s) => s.setSceneMode);
-  const theme = HUD_THEME[visualMode];
   const isCosmos = sceneMode === 'cosmos';
+  const isStarChart = isCosmos && visualMode === 'light';
+  const theme = isStarChart ? HUD_THEME.starChart : HUD_THEME[visualMode];
 
   return (
     <div
@@ -88,7 +99,7 @@ export function HUD(): React.JSX.Element {
             letterSpacing: '0.3px',
             cursor: 'pointer',
             boxShadow:
-              visualMode === 'dark'
+              visualMode === 'dark' || isStarChart
                 ? '0 0 12px rgba(0, 165, 255, 0.22)'
                 : '0 1px 10px rgba(95, 116, 168, 0.15)',
           }}
