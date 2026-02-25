@@ -40,7 +40,7 @@ const DANGEROUS_PATTERNS = [
   /\bfs\.(?:readFile|writeFile|unlink|rmdir|mkdir)\b/,
   /require\s*\(\s*['"](?:child_process|fs|path|os|net|http|https|crypto)['"]\s*\)/,
   /import\s+.*from\s+['"](?:child_process|net|os)['"]/,
-  /\bexec\s*\(/,
+  /(?<!\.\s*)\bexec\s*\(/,
   /\bexecSync\s*\(/,
   /\bspawn\s*\(/,
   /sk-ant-[a-zA-Z0-9]+/,

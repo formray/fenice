@@ -147,6 +147,20 @@ describe('scanContentForDangerousPatterns', () => {
     expect(violations.length).toBeGreaterThan(0);
   });
 
+  it('should allow Mongoose .exec() calls', () => {
+    const mongooseCode = `
+const users = await UserModel.find({ active: true }).exec();
+const count = await UserModel.countDocuments().exec();
+`;
+    const violations = scanContentForDangerousPatterns(mongooseCode);
+    expect(violations).toHaveLength(0);
+  });
+
+  it('should still detect standalone exec() calls', () => {
+    const violations = scanContentForDangerousPatterns('exec("rm -rf /")');
+    expect(violations.length).toBeGreaterThan(0);
+  });
+
   it('should pass clean code', () => {
     const cleanCode = `
 import { z } from 'zod';
