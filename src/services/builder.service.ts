@@ -16,6 +16,7 @@ import {
 } from './builder/git-ops.js';
 import { createPullRequest } from './builder/github-pr.js';
 import { validateProject, formatValidationErrors } from './builder/validator.js';
+import { computeDiffs, computePlanCoverage, findImpactedFiles } from './builder/dry-run.js';
 import { BuilderWorldNotifier } from './builder/world-notifier.js';
 import type { WorldWsManager } from '../ws/world-manager.js';
 import { createLogger } from '../utils/logger.js';
@@ -268,18 +269,26 @@ export class BuilderService {
       }
 
       if (isDryRun) {
-        // Dry run: store generated files but don't write to disk or create PR
+        const diffs = await computeDiffs(projectRoot, result.files);
+        const planCoverage = computePlanCoverage(plan.files, result.files);
+        const impactedFiles = await findImpactedFiles(projectRoot, result.files);
+
         await this.updateStatus(jobId, 'completed', {
           result: {
             files: result.files,
             validationPassed: true,
             tokenUsage: { inputTokens: totalTokens.input, outputTokens: totalTokens.output },
+            diffs,
+            planCoverage,
+            impactedFiles: impactedFiles.length > 0 ? impactedFiles : undefined,
           },
         });
-        // Emit synthetic deltas so the 3D world previews new buildings
         this.notifier?.emitSyntheticDeltas(jobId, result.files);
         this.notifier?.emitProgress(jobId, 'completed');
-        logger.info({ jobId }, 'Dry run completed');
+        logger.info(
+          { jobId, diffs: diffs.length, missing: planCoverage.missing.length },
+          'Dry run completed with enrichment'
+        );
         return;
       }
 
