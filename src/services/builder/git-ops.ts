@@ -150,10 +150,12 @@ export async function pushBranch(projectRoot: string, branch: string): Promise<v
 export async function cleanupBranch(projectRoot: string, branch: string): Promise<void> {
   const git: SimpleGit = simpleGit(projectRoot);
 
-  // Switch back to main before deleting
+  // Switch back to main before deleting.
+  // Use --force to discard uncommitted changes (e.g. from repair writes).
+  // Safe because callers re-write files after cleanup if needed (draft PR path).
   const currentBranch = (await git.branch()).current;
   if (currentBranch === branch) {
-    await git.checkout('main');
+    await git.checkout(['--force', 'main']);
   }
 
   try {

@@ -194,10 +194,10 @@ describe('git-ops', () => {
   });
 
   describe('cleanupBranch', () => {
-    it('should checkout main and delete branch', async () => {
+    it('should force-checkout main and delete branch', async () => {
       await cleanupBranch('/project', 'builder/test-branch');
 
-      expect(mockCheckout).toHaveBeenCalledWith('main');
+      expect(mockCheckout).toHaveBeenCalledWith(['--force', 'main']);
       expect(mockDeleteLocalBranch).toHaveBeenCalledWith('builder/test-branch', true);
     });
 
