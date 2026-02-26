@@ -163,23 +163,18 @@ async function runToolLoop(config: ToolLoopConfig): Promise<GenerationResult> {
             continue;
           }
 
-          const codeIssues = checkCodePatterns(path, content);
-          if (codeIssues.length > 0) {
-            toolResults.push({
-              type: 'tool_result',
-              tool_use_id: block.id,
-              content: `REJECTED: Fix these issues and rewrite the file:\n${codeIssues.map((i) => `- ${i}`).join('\n')}`,
-              is_error: true,
-            });
-            continue;
-          }
-
           files.push({ path, content, action: 'created' });
           createdPaths.add(path);
+
+          const codeIssues = checkCodePatterns(path, content);
+          const warning =
+            codeIssues.length > 0
+              ? `\nWARNING — fix these with modify_file:\n${codeIssues.map((i) => `- ${i}`).join('\n')}`
+              : '';
           toolResults.push({
             type: 'tool_result',
             tool_use_id: block.id,
-            content: `File created: ${path}`,
+            content: `File created: ${path}${warning}`,
           });
         } else if (toolName === 'modify_file') {
           const path = input['path'] ?? '';
@@ -224,22 +219,17 @@ async function runToolLoop(config: ToolLoopConfig): Promise<GenerationResult> {
             continue;
           }
 
-          const modifyCodeIssues = checkCodePatterns(path, content);
-          if (modifyCodeIssues.length > 0) {
-            toolResults.push({
-              type: 'tool_result',
-              tool_use_id: block.id,
-              content: `REJECTED: Fix these issues and rewrite the file:\n${modifyCodeIssues.map((i) => `- ${i}`).join('\n')}`,
-              is_error: true,
-            });
-            continue;
-          }
-
           files.push({ path, content, action: 'modified' });
+
+          const modifyCodeIssues = checkCodePatterns(path, content);
+          const modifyWarning =
+            modifyCodeIssues.length > 0
+              ? `\nWARNING — fix these with modify_file:\n${modifyCodeIssues.map((i) => `- ${i}`).join('\n')}`
+              : '';
           toolResults.push({
             type: 'tool_result',
             tool_use_id: block.id,
-            content: `File modified: ${path}`,
+            content: `File modified: ${path}${modifyWarning}`,
           });
         } else if (toolName === 'read_file') {
           const path = input['path'] ?? '';

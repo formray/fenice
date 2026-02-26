@@ -343,6 +343,16 @@ export class BuilderService {
         return;
       }
 
+      // Guard: if generation produced 0 files, fail early instead of empty commit
+      if (result.files.length === 0) {
+        await this.updateStatus(jobId, 'failed', {
+          error: 'Generation produced 0 files — Claude could not generate any valid code.',
+        });
+        this.notifier?.emitProgress(jobId, 'failed');
+        logger.error({ jobId }, 'Generation produced 0 files');
+        return;
+      }
+
       // Step 3: Write files to disk + create git branch
       currentStep = 'writing_files';
       await this.updateStatus(jobId, currentStep);
