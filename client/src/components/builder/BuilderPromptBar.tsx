@@ -1,104 +1,22 @@
 import { useEffect, useCallback, useRef } from 'react';
-import { useBuilderStore } from '../stores/builder.store';
-import { useViewStore } from '../stores/view.store';
+import { useBuilderStore } from '../../stores/builder.store';
+import { useViewStore } from '../../stores/view.store';
 import {
   submitBuilderPrompt,
   fetchBuilderJob,
   approveBuilderJob,
   rejectBuilderJob,
-} from '../services/builder-api';
-import type { BuilderJobStatus, BuilderPlanFile } from '../types/builder';
+} from '../../services/builder-api';
+import type { BuilderPlanFile } from '../../types/builder';
+import {
+  BUILDER_THEME,
+  TYPE_COLORS,
+  STATUS_LABELS,
+  getProgressPercent,
+  GLOW_KEYFRAMES,
+} from './builder-theme';
 
 const WS_TOKEN = import.meta.env.VITE_WS_TOKEN as string | undefined;
-
-const BUILDER_THEME = {
-  dark: {
-    pillBg: 'rgba(12, 20, 42, 0.82)',
-    pillBorder: '#2f4670',
-    pillText: '#d8e6ff',
-    panelBg: 'rgba(10, 10, 20, 0.95)',
-    panelBorder: '#2a2a3e',
-    text: '#e0e0e0',
-    muted: '#888',
-    inputBg: 'rgba(255, 255, 255, 0.06)',
-    inputBorder: '#2a2a3e',
-    inputText: '#e0e0e0',
-    buttonBg: '#2563eb',
-    buttonText: '#fff',
-    buttonDisabled: '#1e3a5f',
-    errorText: '#ff6b6b',
-    successText: '#50c878',
-    badgeCreated: '#2563eb',
-    badgeModified: '#f59e0b',
-    close: '#888',
-    progressBg: 'rgba(255, 255, 255, 0.08)',
-    progressFill: '#2563eb',
-  },
-  light: {
-    pillBg: 'rgba(255, 255, 255, 0.94)',
-    pillBorder: '#9fb3df',
-    pillText: '#1f2f52',
-    panelBg: 'rgba(245, 249, 255, 0.96)',
-    panelBorder: '#b8c8e8',
-    text: '#1f2f4f',
-    muted: '#4f6187',
-    inputBg: 'rgba(0, 0, 0, 0.03)',
-    inputBorder: '#b8c8e8',
-    inputText: '#1f2f4f',
-    buttonBg: '#2563eb',
-    buttonText: '#fff',
-    buttonDisabled: '#93b4e8',
-    errorText: '#dc2626',
-    successText: '#16a34a',
-    badgeCreated: '#2563eb',
-    badgeModified: '#d97706',
-    close: '#5b6e98',
-    progressBg: 'rgba(0, 0, 0, 0.06)',
-    progressFill: '#2563eb',
-  },
-} as const;
-
-const TYPE_COLORS: Record<string, string> = {
-  schema: '#8b5cf6',
-  model: '#06b6d4',
-  service: '#f59e0b',
-  route: '#10b981',
-  test: '#6366f1',
-};
-
-const STATUS_LABELS: Record<BuilderJobStatus, string> = {
-  queued: 'Queued',
-  planning: 'Planning...',
-  plan_ready: 'Plan ready — awaiting approval',
-  reading_context: 'Reading project context...',
-  generating: 'Generating code...',
-  writing_files: 'Writing files...',
-  validating: 'Running validation...',
-  creating_pr: 'Creating pull request...',
-  completed: 'Completed',
-  completed_draft: 'Completed (draft)',
-  failed: 'Failed',
-  rejected: 'Rejected',
-};
-
-const PROGRESS_ORDER: BuilderJobStatus[] = [
-  'queued',
-  'planning',
-  'plan_ready',
-  'reading_context',
-  'generating',
-  'writing_files',
-  'validating',
-  'creating_pr',
-  'completed',
-];
-
-function getProgressPercent(status: BuilderJobStatus | null): number {
-  if (!status) return 0;
-  const idx = PROGRESS_ORDER.indexOf(status);
-  if (idx < 0) return 0;
-  return Math.round(((idx + 1) / PROGRESS_ORDER.length) * 100);
-}
 
 export function BuilderPromptBar(): React.JSX.Element {
   const expanded = useBuilderStore((s) => s.expanded);
@@ -226,25 +144,6 @@ export function BuilderPromptBar(): React.JSX.Element {
   useEffect(() => {
     logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [logs]);
-
-  const glowKeyframes = `
-@keyframes builderShimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-@keyframes builderGlow {
-  0%, 100% { box-shadow: 0 0 4px rgba(37, 99, 235, 0.3); }
-  50% { box-shadow: 0 0 12px rgba(37, 99, 235, 0.6), 0 0 24px rgba(37, 99, 235, 0.2); }
-}
-@keyframes builderPulse {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
-}
-@keyframes builderIndeterminate {
-  0% { left: -40%; }
-  100% { left: 100%; }
-}
-`;
 
   // Collapsed pill
   if (!expanded) {
@@ -492,7 +391,7 @@ export function BuilderPromptBar(): React.JSX.Element {
           </div>
           {isRunning && (
             <>
-              <style>{glowKeyframes}</style>
+              <style>{GLOW_KEYFRAMES}</style>
               <div
                 style={{
                   height: '4px',

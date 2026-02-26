@@ -1,7 +1,7 @@
 import { Scene } from './components/Scene';
 import { HUD } from './components/HUD';
 import { SidePanel } from './components/SidePanel';
-import { BuilderPromptBar } from './components/BuilderPromptBar';
+import { BuilderPromptBar } from './components/builder/BuilderPromptBar';
 import { CosmosSettings } from './components/CosmosSettings';
 import { useWorldSocket } from './hooks/useWorldSocket';
 

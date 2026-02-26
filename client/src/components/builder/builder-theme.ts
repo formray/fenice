@@ -124,3 +124,22 @@ export function getProgressPercent(status: BuilderJobStatus | null): number {
   if (idx < 0) return 0;
   return Math.round(((idx + 1) / PROGRESS_ORDER.length) * 100);
 }
+
+export const GLOW_KEYFRAMES = `
+@keyframes builderShimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes builderGlow {
+  0%, 100% { box-shadow: 0 0 4px rgba(37, 99, 235, 0.3); }
+  50% { box-shadow: 0 0 12px rgba(37, 99, 235, 0.6), 0 0 24px rgba(37, 99, 235, 0.2); }
+}
+@keyframes builderPulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+@keyframes builderIndeterminate {
+  0% { left: -40%; }
+  100% { left: 100%; }
+}
+`;
