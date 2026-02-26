@@ -1,7 +1,8 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { writeFile, mkdir, unlink } from 'node:fs/promises';
+import { writeFile, mkdir, unlink, symlink, rm } from 'node:fs/promises';
 import { readFile } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
+import { tmpdir } from 'node:os';
 import type { BuilderGeneratedFile, BuilderPlan } from '../../schemas/builder.schema.js';
 import { BuilderPlanSchema } from '../../schemas/builder.schema.js';
 import {
@@ -438,24 +439,68 @@ async function runValidationSteps(
   return { passed: false, errors: errorParts.join('\n\n') };
 }
 
-function buildValidateCallback(projectRoot: string): ValidateCallback {
+/**
+ * Creates a detached worktree for validation with node_modules symlinked.
+ * This prevents in-loop validation from writing to the main checkout
+ * (which would trigger tsx watch restart).
+ */
+async function createValidationWorktree(projectRoot: string): Promise<string> {
+  const { execFile } = await import('node:child_process');
+  const { promisify } = await import('node:util');
+  const execFileAsync = promisify(execFile);
+  const { mkdtemp } = await import('node:fs/promises');
+
+  const wtPath = await mkdtemp(join(tmpdir(), 'fenice-validate-'));
+  await execFileAsync('git', ['worktree', 'add', '--detach', wtPath, 'HEAD'], {
+    cwd: projectRoot,
+    timeout: 15_000,
+  });
+
+  // Symlink node_modules so tsc/eslint can resolve dependencies
+  await symlink(join(projectRoot, 'node_modules'), join(wtPath, 'node_modules'));
+
+  logger.info({ worktreePath: wtPath }, 'Created validation worktree');
+  return wtPath;
+}
+
+async function removeValidationWorktree(projectRoot: string, wtPath: string): Promise<void> {
+  try {
+    const { execFile } = await import('node:child_process');
+    const { promisify } = await import('node:util');
+    const execFileAsync = promisify(execFile);
+
+    await execFileAsync('git', ['worktree', 'remove', wtPath, '--force'], {
+      cwd: projectRoot,
+      timeout: 10_000,
+    });
+  } catch {
+    // Fallback: rm the directory and prune
+    try {
+      await rm(wtPath, { recursive: true, force: true });
+    } catch {
+      logger.warn({ worktreePath: wtPath }, 'Failed to clean up validation worktree');
+    }
+  }
+}
+
+function buildValidateCallback(validationRoot: string): ValidateCallback {
   return async (files: BuilderGeneratedFile[]) => {
-    // Write files to disk so tsc and eslint can see them
-    const paths = await writeFilesToDisk(projectRoot, files);
+    // Write files to the validation worktree (NOT the main checkout)
+    const paths = await writeFilesToDisk(validationRoot, files);
     logger.info(
       { fileCount: paths.length },
-      'In-loop validation: files written, running tsc + eslint'
+      'In-loop validation: files written to worktree, running tsc + eslint'
     );
 
     const generatedPaths = new Set(paths);
-    const result = await runValidationSteps(projectRoot, generatedPaths);
+    const result = await runValidationSteps(validationRoot, generatedPaths);
 
     if (result.passed) {
       logger.info('In-loop validation passed');
     } else {
       logger.warn({ errorLength: result.errors.length }, 'In-loop validation failed');
-      // Clean up files so they don't interfere with git state
-      await cleanupFiles(projectRoot, paths);
+      // Clean up generated files from the worktree so next round starts clean
+      await cleanupFiles(validationRoot, paths);
     }
 
     return result;
@@ -548,15 +593,23 @@ export async function generateCode(
   const systemPrompt = plan?.taskType ? buildSystemPrompt(plan.taskType) : BUILDER_SYSTEM_PROMPT;
   const allowedPlanPaths = plan ? new Set(plan.files.map((f) => f.path)) : undefined;
 
-  return runToolLoop({
-    client,
-    systemPrompt,
-    userMessage,
-    projectRoot,
-    onToolActivity,
-    allowedPlanPaths,
-    onValidate: buildValidateCallback(projectRoot),
-  });
+  // Create a validation worktree so in-loop tsc/eslint writes don't touch the main checkout.
+  // Without this, writing generated files to src/ triggers tsx watch and kills the pipeline.
+  const validationWt = await createValidationWorktree(projectRoot);
+
+  try {
+    return await runToolLoop({
+      client,
+      systemPrompt,
+      userMessage,
+      projectRoot,
+      onToolActivity,
+      allowedPlanPaths,
+      onValidate: buildValidateCallback(validationWt),
+    });
+  } finally {
+    await removeValidationWorktree(projectRoot, validationWt);
+  }
 }
 
 export async function repairCode(

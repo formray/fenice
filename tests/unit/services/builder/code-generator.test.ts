@@ -13,7 +13,7 @@ vi.mock('@anthropic-ai/sdk', () => ({
   default: MockAnthropic,
 }));
 
-// Mock fs for read_file tool + in-loop validation (writeFilesToDisk / cleanupFiles)
+// Mock fs for read_file tool + in-loop validation (writeFilesToDisk / cleanupFiles / worktree)
 vi.mock('node:fs/promises', () => ({
   readFile: vi.fn().mockImplementation(async (path: string) => {
     if (path === '/project/src/index.ts') {
@@ -23,7 +23,10 @@ vi.mock('node:fs/promises', () => ({
   }),
   writeFile: vi.fn().mockResolvedValue(undefined),
   mkdir: vi.fn().mockResolvedValue(undefined),
+  mkdtemp: vi.fn().mockResolvedValue('/tmp/fenice-validate-test'),
   unlink: vi.fn().mockResolvedValue(undefined),
+  symlink: vi.fn().mockResolvedValue(undefined),
+  rm: vi.fn().mockResolvedValue(undefined),
 }));
 
 // Mock child_process for in-loop validation (runValidationSteps)
