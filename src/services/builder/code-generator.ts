@@ -63,18 +63,26 @@ async function runToolLoop(config: ToolLoopConfig): Promise<GenerationResult> {
 
   const messages: Anthropic.MessageParam[] = [{ role: 'user', content: userMessage }];
 
+  // Cache the system prompt — it's identical across all tool-use rounds.
+  // After the first round, cached tokens cost 1/10th the normal rate.
+  const cachedSystem: Anthropic.MessageCreateParams['system'] = [
+    { type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } },
+  ];
+
+  const toolDefs = BUILDER_TOOLS.map((t) => ({
+    name: t.name,
+    description: t.description,
+    input_schema: t.input_schema as Anthropic.Tool['input_schema'],
+  }));
+
   for (let turn = 0; turn < MAX_TURNS; turn++) {
     let response: Anthropic.Message;
     try {
       response = await client.messages.create({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 8192,
-        system: systemPrompt,
-        tools: BUILDER_TOOLS.map((t) => ({
-          name: t.name,
-          description: t.description,
-          input_schema: t.input_schema as Anthropic.Tool['input_schema'],
-        })),
+        system: cachedSystem,
+        tools: toolDefs,
         messages,
       });
     } catch (err: unknown) {
@@ -85,6 +93,17 @@ async function runToolLoop(config: ToolLoopConfig): Promise<GenerationResult> {
 
     totalInputTokens += response.usage.input_tokens;
     totalOutputTokens += response.usage.output_tokens;
+
+    // Log cache performance for cost tracking
+    const usageRecord = response.usage as unknown as Record<string, number>;
+    const cacheRead = usageRecord['cache_read_input_tokens'] ?? 0;
+    const cacheCreation = usageRecord['cache_creation_input_tokens'] ?? 0;
+    if (cacheRead > 0 || cacheCreation > 0) {
+      logger.info(
+        { turn, cacheRead, cacheCreation, input: response.usage.input_tokens },
+        'Prompt cache stats'
+      );
+    }
 
     if (response.stop_reason === 'end_turn') {
       break;
@@ -272,7 +291,7 @@ export async function generatePlan(
     response = await client.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 1024,
-      system: planPrompt,
+      system: [{ type: 'text', text: planPrompt, cache_control: { type: 'ephemeral' } }],
       messages: [{ role: 'user', content: userMessage }],
     });
   } catch (err: unknown) {
@@ -355,6 +374,9 @@ export async function repairCode(
 ): Promise<GenerationResult> {
   const client = new Anthropic({ apiKey });
 
+  // Restrict repair to only files that were originally generated
+  const allowedPlanPaths = new Set(originalFiles.map((f) => f.path));
+
   const filesListing = originalFiles
     .map((f) => `### ${f.path}\n\`\`\`typescript\n${f.content}\n\`\`\``)
     .join('\n\n');
@@ -376,5 +398,6 @@ Fix the issues and rewrite ALL files using the tools. Follow the same project co
     systemPrompt: BUILDER_SYSTEM_PROMPT,
     userMessage,
     projectRoot,
+    allowedPlanPaths,
   });
 }

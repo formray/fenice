@@ -21,24 +21,17 @@ const ALL_TASK_TYPES: TaskType[] = [
 ];
 
 describe('BUILDER_BASE_PROMPT', () => {
-  it('should contain tech stack information', () => {
-    expect(BUILDER_BASE_PROMPT).toContain('Node.js');
-    expect(BUILDER_BASE_PROMPT).toContain('TypeScript');
-    expect(BUILDER_BASE_PROMPT).toContain('Hono');
-    expect(BUILDER_BASE_PROMPT).toContain('Zod');
-    expect(BUILDER_BASE_PROMPT).toContain('Mongoose');
-  });
-
   it('should contain critical rules', () => {
     expect(BUILDER_BASE_PROMPT).toContain('.js');
+    expect(BUILDER_BASE_PROMPT).toContain('Zod v4');
     expect(BUILDER_BASE_PROMPT).toContain('exactOptionalPropertyTypes');
     expect(BUILDER_BASE_PROMPT).toContain('loadEnv');
   });
 
-  it('should contain naming conventions', () => {
+  it('should contain naming conventions and instructions', () => {
     expect(BUILDER_BASE_PROMPT).toContain('kebab-case');
     expect(BUILDER_BASE_PROMPT).toContain('PascalCase');
-    expect(BUILDER_BASE_PROMPT).toContain('camelCase');
+    expect(BUILDER_BASE_PROMPT).toContain('tools');
   });
 });
 
@@ -52,13 +45,13 @@ describe('TASK_PROMPTS', () => {
 });
 
 describe('buildSystemPrompt', () => {
-  it('should include base conventions for ALL 6 task types', () => {
+  it('should include critical rules for ALL 6 task types', () => {
     for (const taskType of ALL_TASK_TYPES) {
       const prompt = buildSystemPrompt(taskType);
-      expect(prompt).toContain('Node.js');
-      expect(prompt).toContain('TypeScript');
       expect(prompt).toContain('.js');
       expect(prompt).toContain('kebab-case');
+      expect(prompt).toContain('Zod v4');
+      expect(prompt).toContain('tools');
     }
   });
 
