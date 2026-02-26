@@ -25,6 +25,7 @@ vi.mock('simple-git', () => ({
 const {
   createBranchAndCommit,
   createDraftBranchAndCommit,
+  amendCommitWithFiles,
   pushBranch,
   cleanupBranch,
   parseGitHubUrl,
@@ -139,6 +140,25 @@ describe('git-ops', () => {
       // Branch slug should be max 40 chars
       const slug = result.branch.replace('builder/job-123-', '');
       expect(slug.length).toBeLessThanOrEqual(40);
+    });
+  });
+
+  describe('amendCommitWithFiles', () => {
+    it('should stage files and amend commit with --no-verify --no-edit', async () => {
+      await amendCommitWithFiles('/project', [
+        'src/routes/note.routes.ts',
+        'src/schemas/note.schema.ts',
+      ]);
+
+      expect(mockAdd).toHaveBeenCalledWith([
+        'src/routes/note.routes.ts',
+        'src/schemas/note.schema.ts',
+      ]);
+      expect(mockCommit).toHaveBeenCalledWith('fix: apply repair', undefined, {
+        '--amend': null,
+        '--no-verify': null,
+        '--no-edit': null,
+      });
     });
   });
 

@@ -16,6 +16,7 @@ import { writeGeneratedFiles } from './builder/file-writer.js';
 import {
   createBranchAndCommit,
   createDraftBranchAndCommit,
+  amendCommitWithFiles,
   pushBranch,
   cleanupBranch,
   detectGitHubRemote,
@@ -377,6 +378,11 @@ export class BuilderService {
         }
 
         await writeGeneratedFiles(projectRoot, repairResult.files);
+        // Amend the branch commit so it reflects the repaired state.
+        // Without this, pushBranch would push the original broken code,
+        // and cleanupBranch would fail on uncommitted changes.
+        const repairedPaths = repairResult.files.map((f) => f.path);
+        await amendCommitWithFiles(projectRoot, repairedPaths);
         currentFiles = repairResult.files;
         totalTokens.input += repairResult.tokenUsage.inputTokens;
         totalTokens.output += repairResult.tokenUsage.outputTokens;

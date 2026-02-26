@@ -141,6 +141,20 @@ export async function createDraftBranchAndCommit(
   return { branch, commitHash: commitResult.commit || 'unknown' };
 }
 
+export async function amendCommitWithFiles(
+  projectRoot: string,
+  filePaths: string[]
+): Promise<void> {
+  const git: SimpleGit = simpleGit(projectRoot);
+  await git.add(filePaths);
+  await git.commit('fix: apply repair', undefined, {
+    '--amend': null,
+    '--no-verify': null,
+    '--no-edit': null,
+  });
+  logger.info({ fileCount: filePaths.length }, 'Amended commit with repaired files');
+}
+
 export async function pushBranch(projectRoot: string, branch: string): Promise<void> {
   const git: SimpleGit = simpleGit(projectRoot);
   await git.push('origin', branch, ['--set-upstream']);
