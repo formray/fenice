@@ -15,6 +15,7 @@ import {
   getProgressPercent,
   GLOW_KEYFRAMES,
 } from './builder-theme';
+import { BuilderTaskSelector } from './BuilderTaskSelector';
 
 const WS_TOKEN = import.meta.env.VITE_WS_TOKEN as string | undefined;
 
@@ -42,6 +43,8 @@ export function BuilderPromptBar(): React.JSX.Element {
   const setPlan = useBuilderStore((s) => s.setPlan);
   const updatePlanFile = useBuilderStore((s) => s.updatePlanFile);
   const removePlanFile = useBuilderStore((s) => s.removePlanFile);
+  const taskType = useBuilderStore((s) => s.taskType);
+  const setTaskType = useBuilderStore((s) => s.setTaskType);
 
   const visualMode = useViewStore((s) => s.visualMode);
   const theme = BUILDER_THEME[visualMode];
@@ -60,12 +63,12 @@ export function BuilderPromptBar(): React.JSX.Element {
     if (!canSubmit || !WS_TOKEN) return;
     setSubmitting(true);
     try {
-      const { jobId: newJobId } = await submitBuilderPrompt(WS_TOKEN, prompt, dryRun);
+      const { jobId: newJobId } = await submitBuilderPrompt(WS_TOKEN, prompt, dryRun, taskType);
       startJob(newJobId);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Submission failed');
     }
-  }, [canSubmit, prompt, dryRun, setSubmitting, startJob, setError]);
+  }, [canSubmit, prompt, dryRun, taskType, setSubmitting, startJob, setError]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -241,6 +244,13 @@ export function BuilderPromptBar(): React.JSX.Element {
       >
         AI Builder
       </div>
+
+      <BuilderTaskSelector
+        selected={taskType}
+        onSelect={setTaskType}
+        disabled={isRunning}
+        theme={theme}
+      />
 
       {/* Input row */}
       <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
