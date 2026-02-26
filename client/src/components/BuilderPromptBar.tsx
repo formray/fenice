@@ -1,7 +1,12 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { useBuilderStore } from '../stores/builder.store';
 import { useViewStore } from '../stores/view.store';
-import { submitBuilderPrompt, fetchBuilderJob, approveBuilderJob, rejectBuilderJob } from '../services/builder-api';
+import {
+  submitBuilderPrompt,
+  fetchBuilderJob,
+  approveBuilderJob,
+  rejectBuilderJob,
+} from '../services/builder-api';
 import type { BuilderJobStatus, BuilderPlanFile } from '../types/builder';
 
 const WS_TOKEN = import.meta.env.VITE_WS_TOKEN as string | undefined;
@@ -71,6 +76,7 @@ const STATUS_LABELS: Record<BuilderJobStatus, string> = {
   validating: 'Running validation...',
   creating_pr: 'Creating pull request...',
   completed: 'Completed',
+  completed_draft: 'Completed (draft)',
   failed: 'Failed',
   rejected: 'Rejected',
 };
@@ -124,7 +130,12 @@ export function BuilderPromptBar(): React.JSX.Element {
   const logEndRef = useRef<HTMLDivElement>(null);
 
   const isRunning =
-    status !== null && status !== 'completed' && status !== 'failed' && status !== 'rejected' && status !== 'plan_ready';
+    status !== null &&
+    status !== 'completed' &&
+    status !== 'completed_draft' &&
+    status !== 'failed' &&
+    status !== 'rejected' &&
+    status !== 'plan_ready';
   const canSubmit = prompt.length >= 10 && prompt.length <= 2000 && !submitting && !isRunning;
 
   const handleSubmit = useCallback(async () => {
@@ -169,13 +180,13 @@ export function BuilderPromptBar(): React.JSX.Element {
   // Fetch full job details when status reaches completed or failed
   useEffect(() => {
     if (!jobId || !WS_TOKEN) return;
-    if (status !== 'completed' && status !== 'failed') return;
+    if (status !== 'completed' && status !== 'completed_draft' && status !== 'failed') return;
 
     let cancelled = false;
     void fetchBuilderJob(WS_TOKEN, jobId)
       .then((job) => {
         if (cancelled) return;
-        if (job.status === 'completed' && job.result) {
+        if ((job.status === 'completed' || job.status === 'completed_draft') && job.result) {
           setResult(job.result.files);
         } else if (job.status === 'failed' && job.error) {
           setError(job.error.message);
@@ -206,7 +217,9 @@ export function BuilderPromptBar(): React.JSX.Element {
         setError(err instanceof Error ? err.message : 'Failed to fetch plan');
       });
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [jobId, status, setPlan, setError]);
 
   // Auto-scroll log to bottom
@@ -447,7 +460,7 @@ export function BuilderPromptBar(): React.JSX.Element {
               style={{
                 fontSize: '12px',
                 color:
-                  status === 'completed'
+                  status === 'completed' || status === 'completed_draft'
                     ? theme.successText
                     : status === 'failed' || status === 'rejected'
                       ? theme.errorText
@@ -457,7 +470,10 @@ export function BuilderPromptBar(): React.JSX.Element {
             >
               {statusMessage ?? STATUS_LABELS[status]}
             </span>
-            {(status === 'completed' || status === 'failed' || status === 'rejected') && (
+            {(status === 'completed' ||
+              status === 'completed_draft' ||
+              status === 'failed' ||
+              status === 'rejected') && (
               <button
                 type="button"
                 onClick={dismiss}
@@ -477,37 +493,55 @@ export function BuilderPromptBar(): React.JSX.Element {
           {isRunning && (
             <>
               <style>{glowKeyframes}</style>
-              <div style={{
-                height: '4px', borderRadius: '2px', backgroundColor: theme.progressBg,
-                overflow: 'hidden', position: 'relative' as const,
-                animation: 'builderGlow 2s ease-in-out infinite',
-              }}>
+              <div
+                style={{
+                  height: '4px',
+                  borderRadius: '2px',
+                  backgroundColor: theme.progressBg,
+                  overflow: 'hidden',
+                  position: 'relative' as const,
+                  animation: 'builderGlow 2s ease-in-out infinite',
+                }}
+              >
                 {status === 'planning' ? (
                   /* Indeterminate shimmer during planning */
-                  <div style={{
-                    position: 'absolute' as const, height: '100%', width: '40%',
-                    background: `linear-gradient(90deg, transparent, ${theme.progressFill}, transparent)`,
-                    animation: 'builderIndeterminate 1.5s ease-in-out infinite',
-                  }} />
+                  <div
+                    style={{
+                      position: 'absolute' as const,
+                      height: '100%',
+                      width: '40%',
+                      background: `linear-gradient(90deg, transparent, ${theme.progressFill}, transparent)`,
+                      animation: 'builderIndeterminate 1.5s ease-in-out infinite',
+                    }}
+                  />
                 ) : (
                   /* Determinate fill with shimmer during generation */
-                  <div style={{
-                    height: '100%', width: `${getProgressPercent(status)}%`,
-                    borderRadius: '2px', transition: 'width 0.6s ease',
-                    background: `linear-gradient(90deg, ${theme.progressFill}, #60a5fa, ${theme.progressFill})`,
-                    backgroundSize: '200% 100%',
-                    animation: 'builderShimmer 2s linear infinite, builderPulse 1.5s ease-in-out infinite',
-                  }} />
+                  <div
+                    style={{
+                      height: '100%',
+                      width: `${getProgressPercent(status)}%`,
+                      borderRadius: '2px',
+                      transition: 'width 0.6s ease',
+                      background: `linear-gradient(90deg, ${theme.progressFill}, #60a5fa, ${theme.progressFill})`,
+                      backgroundSize: '200% 100%',
+                      animation:
+                        'builderShimmer 2s linear infinite, builderPulse 1.5s ease-in-out infinite',
+                    }}
+                  />
                 )}
               </div>
             </>
           )}
-          {status === 'completed' && (
-            <div style={{
-              height: '4px', borderRadius: '2px', width: '100%',
-              backgroundColor: theme.successText,
-              boxShadow: `0 0 8px ${theme.successText}40, 0 0 16px ${theme.successText}20`,
-            }} />
+          {(status === 'completed' || status === 'completed_draft') && (
+            <div
+              style={{
+                height: '4px',
+                borderRadius: '2px',
+                width: '100%',
+                backgroundColor: theme.successText,
+                boxShadow: `0 0 8px ${theme.successText}40, 0 0 16px ${theme.successText}20`,
+              }}
+            />
           )}
         </div>
       )}
@@ -516,34 +550,68 @@ export function BuilderPromptBar(): React.JSX.Element {
       {status === 'plan_ready' && plan && (
         <div style={{ marginBottom: '12px' }}>
           {summary && (
-            <div style={{ fontSize: '12px', color: theme.text, marginBottom: '10px', lineHeight: 1.4 }}>
+            <div
+              style={{ fontSize: '12px', color: theme.text, marginBottom: '10px', lineHeight: 1.4 }}
+            >
               {summary}
             </div>
           )}
-          <div style={{
-            fontSize: '10px', color: theme.muted, textTransform: 'uppercase' as const,
-            letterSpacing: '0.5px', marginBottom: '6px',
-          }}>
+          <div
+            style={{
+              fontSize: '10px',
+              color: theme.muted,
+              textTransform: 'uppercase' as const,
+              letterSpacing: '0.5px',
+              marginBottom: '6px',
+            }}
+          >
             Files to Generate ({plan.length})
           </div>
-          <div style={{ maxHeight: '200px', overflowY: 'auto' as const, display: 'flex', flexDirection: 'column' as const, gap: '6px' }}>
+          <div
+            style={{
+              maxHeight: '200px',
+              overflowY: 'auto' as const,
+              display: 'flex',
+              flexDirection: 'column' as const,
+              gap: '6px',
+            }}
+          >
             {plan.map((file: BuilderPlanFile, i: number) => (
-              <div key={i} style={{
-                display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px',
-                padding: '6px 8px', borderRadius: '6px',
-                backgroundColor: visualMode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
-              }}>
-                <span style={{
-                  fontSize: '9px', fontWeight: 700, padding: '1px 5px', borderRadius: '3px',
-                  color: '#fff', backgroundColor: TYPE_COLORS[file.type] ?? theme.badgeCreated,
-                  textTransform: 'uppercase' as const, flexShrink: 0,
-                }}>
+              <div
+                key={i}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontSize: '12px',
+                  padding: '6px 8px',
+                  borderRadius: '6px',
+                  backgroundColor:
+                    visualMode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: '9px',
+                    fontWeight: 700,
+                    padding: '1px 5px',
+                    borderRadius: '3px',
+                    color: '#fff',
+                    backgroundColor: TYPE_COLORS[file.type] ?? theme.badgeCreated,
+                    textTransform: 'uppercase' as const,
+                    flexShrink: 0,
+                  }}
+                >
                   {file.type}
                 </span>
-                <span style={{
-                  fontFamily: 'ui-monospace, "SF Mono", Menlo, monospace', fontSize: '11px',
-                  color: theme.text, flexShrink: 0,
-                }}>
+                <span
+                  style={{
+                    fontFamily: 'ui-monospace, "SF Mono", Menlo, monospace',
+                    fontSize: '11px',
+                    color: theme.text,
+                    flexShrink: 0,
+                  }}
+                >
                   {file.path}
                 </span>
                 <input
@@ -551,16 +619,28 @@ export function BuilderPromptBar(): React.JSX.Element {
                   value={file.description}
                   onChange={(e) => updatePlanFile(i, { description: e.target.value })}
                   style={{
-                    flex: 1, fontSize: '11px', color: theme.muted, background: 'none',
-                    border: 'none', outline: 'none', padding: '0 4px', minWidth: 0,
+                    flex: 1,
+                    fontSize: '11px',
+                    color: theme.muted,
+                    background: 'none',
+                    border: 'none',
+                    outline: 'none',
+                    padding: '0 4px',
+                    minWidth: 0,
                   }}
                 />
                 <button
                   type="button"
                   onClick={() => removePlanFile(i)}
                   style={{
-                    background: 'none', border: 'none', color: theme.close,
-                    fontSize: '14px', cursor: 'pointer', padding: '0 2px', lineHeight: 1, flexShrink: 0,
+                    background: 'none',
+                    border: 'none',
+                    color: theme.close,
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    padding: '0 2px',
+                    lineHeight: 1,
+                    flexShrink: 0,
                   }}
                   aria-label={`Remove ${file.path}`}
                 >
@@ -570,22 +650,36 @@ export function BuilderPromptBar(): React.JSX.Element {
             ))}
           </div>
           <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
-            <button type="button" onClick={() => void handleApprove()}
+            <button
+              type="button"
+              onClick={() => void handleApprove()}
               disabled={!plan || plan.length === 0}
               style={{
-                flex: 1, padding: '8px 16px', borderRadius: '6px', border: 'none',
+                flex: 1,
+                padding: '8px 16px',
+                borderRadius: '6px',
+                border: 'none',
                 backgroundColor: plan && plan.length > 0 ? theme.buttonBg : theme.buttonDisabled,
-                color: theme.buttonText, fontSize: '12px', fontWeight: 600,
+                color: theme.buttonText,
+                fontSize: '12px',
+                fontWeight: 600,
                 cursor: plan && plan.length > 0 ? 'pointer' : 'not-allowed',
               }}
             >
               Approve & Generate
             </button>
-            <button type="button" onClick={() => void handleReject()}
+            <button
+              type="button"
+              onClick={() => void handleReject()}
               style={{
-                padding: '8px 16px', borderRadius: '6px',
-                border: `1px solid ${theme.errorText}`, backgroundColor: 'transparent',
-                color: theme.errorText, fontSize: '12px', fontWeight: 600, cursor: 'pointer',
+                padding: '8px 16px',
+                borderRadius: '6px',
+                border: `1px solid ${theme.errorText}`,
+                backgroundColor: 'transparent',
+                color: theme.errorText,
+                fontSize: '12px',
+                fontWeight: 600,
+                cursor: 'pointer',
               }}
             >
               Reject

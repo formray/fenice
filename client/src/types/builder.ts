@@ -13,13 +13,33 @@ export type BuilderJobStatus =
   | 'validating'
   | 'creating_pr'
   | 'completed'
+  | 'completed_draft'
   | 'failed'
   | 'rejected';
+
+export type TaskType =
+  | 'new-resource'
+  | 'refactor'
+  | 'bugfix'
+  | 'schema-migration'
+  | 'test-gen'
+  | 'doc-gen';
 
 export interface BuilderGeneratedFile {
   path: string;
   content: string;
   action: 'created' | 'modified';
+}
+
+export interface DiffEntry {
+  path: string;
+  diff: string;
+}
+
+export interface PlanCoverage {
+  planned: string[];
+  generated: string[];
+  missing: string[];
 }
 
 export interface BuilderJobResult {
@@ -28,6 +48,11 @@ export interface BuilderJobResult {
   prNumber?: number | undefined;
   branch?: string | undefined;
   validationPassed?: boolean | undefined;
+  validationErrors?: string[] | undefined;
+  tokenUsage?: { inputTokens: number; outputTokens: number } | undefined;
+  diffs?: DiffEntry[] | undefined;
+  planCoverage?: PlanCoverage | undefined;
+  impactedFiles?: string[] | undefined;
 }
 
 export interface BuilderJobError {
@@ -48,6 +73,7 @@ export interface BuilderPlanFile {
 export interface BuilderPlan {
   files: BuilderPlanFile[];
   summary: string;
+  taskType?: TaskType | undefined;
 }
 
 export interface BuilderProgressPayload {
