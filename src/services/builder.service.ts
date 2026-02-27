@@ -271,19 +271,15 @@ export class BuilderService {
       const projectRoot = this.getProjectRoot();
       const context = await buildContextBundle(projectRoot);
 
-      // Build dynamic context if plan specifies contextFiles
+      // Always use dynamic context — it merges reference CRUD files + plan contextFiles + src/index.ts.
+      // The old static fallback missed src/index.ts and didn't label reference files.
       const planContextFiles = plan.contextFiles ?? [];
-      let preformattedContext: string | undefined;
-      if (planContextFiles.length > 0) {
-        const dynamicBundle = await buildDynamicContext(projectRoot, planContextFiles);
-        preformattedContext = formatDynamicContext(dynamicBundle);
-        logger.info(
-          { jobId, contextFileCount: planContextFiles.length },
-          'Dynamic context built from plan'
-        );
-      } else {
-        logger.info({ jobId }, 'Context bundle built (static fallback)');
-      }
+      const dynamicBundle = await buildDynamicContext(projectRoot, planContextFiles);
+      const preformattedContext = formatDynamicContext(dynamicBundle);
+      logger.info(
+        { jobId, contextFileCount: dynamicBundle.contextFiles.length },
+        'Dynamic context built (reference files + plan contextFiles)'
+      );
 
       // Step 2: Generate code via Claude API
       currentStep = 'generating';
@@ -326,7 +322,10 @@ export class BuilderService {
       }
 
       // Final scope policy check on all files
-      const policyViolations = validateGeneratedFiles(result.files);
+      // Pass plan-approved paths — the plan approval is the security gate.
+      // If the user approved a plan that includes src/middleware/foo.ts, allow it.
+      const planApprovedPaths = new Set(plan.files.map((f) => f.path));
+      const policyViolations = validateGeneratedFiles(result.files, planApprovedPaths);
       if (policyViolations.length > 0) {
         throw new AppError(
           400,
@@ -394,8 +393,8 @@ export class BuilderService {
         let currentFiles = result.files;
         let validation = await validateProject(wtPath);
 
-        // Level 1: Repair (up to 2 attempts)
-        const MAX_REPAIR_ATTEMPTS = 2;
+        // Level 1: Repair (1 attempt — second repair never converges, just burns tokens)
+        const MAX_REPAIR_ATTEMPTS = 1;
         for (let attempt = 1; attempt <= MAX_REPAIR_ATTEMPTS && !validation.passed; attempt++) {
           logger.warn({ jobId, attempt }, 'Validation failed, attempting repair');
           const errorSummary = formatValidationErrors(validation);

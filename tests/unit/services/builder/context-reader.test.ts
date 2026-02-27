@@ -13,6 +13,7 @@ vi.mock('node:fs/promises', () => ({
       '/project/src/schemas/common.schema.ts': 'export const ErrorResponseSchema = z.object({});',
       '/project/src/schemas/auth.schema.ts': 'export const LoginSchema = z.object({});',
       '/project/src/routes/health.routes.ts': 'export const healthRouter = new OpenAPIHono();',
+      '/project/src/index.ts': 'export const app = new OpenAPIHono();',
     };
 
     if (path in mockFiles) {
@@ -141,17 +142,20 @@ describe('formatContextForGeneration', () => {
 });
 
 describe('buildDynamicContext', () => {
-  it('should read only requested contextFiles', async () => {
-    const bundle = await buildDynamicContext('/project', [
-      'src/schemas/user.schema.ts',
-      'src/routes/health.routes.ts',
-    ]);
+  it('should always include reference CRUD files plus requested contextFiles', async () => {
+    const bundle = await buildDynamicContext('/project', ['src/routes/health.routes.ts']);
 
-    expect(bundle.contextFiles).toHaveLength(2);
-    expect(bundle.contextFiles[0]?.path).toBe('src/schemas/user.schema.ts');
-    expect(bundle.contextFiles[0]?.content).toBe('export const UserSchema = z.object({});');
-    expect(bundle.contextFiles[1]?.path).toBe('src/routes/health.routes.ts');
-    expect(bundle.contextFiles[1]?.content).toBe('export const healthRouter = new OpenAPIHono();');
+    const paths = bundle.contextFiles.map((f) => f.path);
+    // Reference files always come first
+    expect(paths).toContain('src/schemas/user.schema.ts');
+    expect(paths).toContain('src/models/user.model.ts');
+    expect(paths).toContain('src/services/user.service.ts');
+    expect(paths).toContain('src/routes/user.routes.ts');
+    expect(paths).toContain('src/index.ts');
+    // Plan-specific file appended after reference files
+    expect(paths).toContain('src/routes/health.routes.ts');
+    // No duplicates
+    expect(paths.length).toBe(new Set(paths).size);
   });
 
   it('should always include conventions from CLAUDE.md', async () => {
@@ -161,47 +165,45 @@ describe('buildDynamicContext', () => {
     expect(bundle.conventions).toContain('Tech Stack');
   });
 
-  it('should fall back to DEFAULT_CONTEXT_FILES when contextFiles is empty', async () => {
+  it('should use DEFAULT_CONTEXT_FILES when contextFiles is empty', async () => {
     const bundle = await buildDynamicContext('/project', []);
 
-    expect(bundle.contextFiles).toHaveLength(4);
+    expect(bundle.contextFiles).toHaveLength(5);
     expect(bundle.contextFiles.map((f) => f.path)).toEqual([
       'src/schemas/user.schema.ts',
       'src/models/user.model.ts',
       'src/services/user.service.ts',
       'src/routes/user.routes.ts',
+      'src/index.ts',
     ]);
   });
 
   it('should truncate files when exceeding maxChars budget', async () => {
-    // user.schema.ts = 'export const UserSchema = z.object({});' (39 chars)
-    // health.routes.ts = 'export const healthRouter = new OpenAPIHono();' (46 chars)
-    // Total without truncation = 85 chars
-    // Budget = 50 chars: first file fits (39), second gets truncated at remaining (11 chars)
+    // With a very small budget, later files get truncated or skipped
     const bundle = await buildDynamicContext(
       '/project',
-      ['src/schemas/user.schema.ts', 'src/routes/health.routes.ts'],
-      50 // very small budget
+      ['src/routes/health.routes.ts'],
+      100 // very small budget — reference files will eat most of it
     );
 
-    expect(bundle.contextFiles).toHaveLength(2);
-    // First file should be intact
-    expect(bundle.contextFiles[0]?.content).toBe('export const UserSchema = z.object({});');
-    // Second file should be truncated (truncation marker adds overhead beyond budget)
-    expect(bundle.contextFiles[1]?.content).toContain('... [truncated]');
-    expect(bundle.contextFiles[1]?.content.length).toBeLessThan(46);
+    // Some files should be truncated due to budget
+    const totalChars = bundle.contextFiles.reduce((sum, f) => sum + f.content.length, 0);
+    // Budget is 100, so total non-empty content should not exceed it significantly
+    // (truncation marker adds a bit of overhead)
+    expect(totalChars).toBeLessThanOrEqual(130);
   });
 
   it('should skip files that do not exist', async () => {
-    const bundle = await buildDynamicContext('/project', [
-      'src/schemas/user.schema.ts',
-      'src/nonexistent.ts',
-    ]);
+    const bundle = await buildDynamicContext('/project', ['src/nonexistent.ts']);
 
-    // Should have the existing file, nonexistent returns empty and is skipped
+    // Reference files should still be present + nonexistent returns empty
     const nonEmpty = bundle.contextFiles.filter((f) => f.content.length > 0);
-    expect(nonEmpty).toHaveLength(1);
-    expect(nonEmpty[0]?.path).toBe('src/schemas/user.schema.ts');
+    // All 5 reference files exist in mocks, nonexistent.ts does not
+    expect(nonEmpty).toHaveLength(5);
+    expect(nonEmpty.map((f) => f.path)).toContain('src/schemas/user.schema.ts');
+    // nonexistent should be in the list but with empty content
+    const missing = bundle.contextFiles.find((f) => f.path === 'src/nonexistent.ts');
+    expect(missing?.content).toBe('');
   });
 
   it('should use trimConventions for the conventions part', async () => {
@@ -228,6 +230,7 @@ describe('formatDynamicContext', () => {
 
     expect(result).toContain('Project Conventions');
     expect(result).toContain('Tech Stack');
+    expect(result).toContain('REFERENCE FILES');
     expect(result).toContain('src/schemas/user.schema.ts');
     expect(result).toContain('export const UserSchema = {};');
     expect(result).toContain('src/models/user.model.ts');

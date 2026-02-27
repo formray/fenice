@@ -205,12 +205,14 @@ const DEFAULT_CONTEXT_FILES = [
   'src/models/user.model.ts',
   'src/services/user.service.ts',
   'src/routes/user.routes.ts',
+  'src/index.ts',
 ];
 
-const DEFAULT_MAX_CONTEXT_CHARS = 32_000; // ~8000 tokens at ~4 chars/token
+const DEFAULT_MAX_CONTEXT_CHARS = 50_000; // ~12500 tokens at ~4 chars/token
 
 /**
  * Reads requested contextFiles from disk; falls back to DEFAULT_CONTEXT_FILES if empty.
+ * ALWAYS includes the reference CRUD files (user.*) so Claude can match project patterns.
  * Respects a token budget (maxChars). Truncates files that exceed remaining budget.
  */
 export async function buildDynamicContext(
@@ -224,8 +226,23 @@ export async function buildDynamicContext(
   const rawConventions = await safeReadFile(join(projectRoot, 'CLAUDE.md'));
   const conventions = trimConventions(rawConventions);
 
-  // Use default files if none specified
-  const filesToRead = contextFiles.length > 0 ? contextFiles : DEFAULT_CONTEXT_FILES;
+  // Always include reference CRUD files first — Claude needs these to match project patterns.
+  // Then append plan-specific contextFiles, deduplicating.
+  const seen = new Set<string>();
+  const filesToRead: string[] = [];
+
+  for (const f of DEFAULT_CONTEXT_FILES) {
+    if (!seen.has(f)) {
+      seen.add(f);
+      filesToRead.push(f);
+    }
+  }
+  for (const f of contextFiles) {
+    if (!seen.has(f)) {
+      seen.add(f);
+      filesToRead.push(f);
+    }
+  }
 
   const result: ContextFileContent[] = [];
   let usedChars = 0;
@@ -266,8 +283,11 @@ export async function buildDynamicContext(
   return { conventions, contextFiles: result };
 }
 
+const REFERENCE_FILE_SET = new Set(DEFAULT_CONTEXT_FILES);
+
 /**
  * Formats a DynamicContextBundle into text for the LLM system message.
+ * Reference CRUD files are labeled as "REFERENCE" so Claude matches their patterns exactly.
  */
 export function formatDynamicContext(bundle: DynamicContextBundle): string {
   const parts: string[] = [];
@@ -276,7 +296,21 @@ export function formatDynamicContext(bundle: DynamicContextBundle): string {
     parts.push('## Project Conventions (excerpt)\n```\n' + bundle.conventions + '\n```\n');
   }
 
-  for (const file of bundle.contextFiles) {
+  const refFiles = bundle.contextFiles.filter((f) => REFERENCE_FILE_SET.has(f.path));
+  const otherFiles = bundle.contextFiles.filter((f) => !REFERENCE_FILE_SET.has(f.path));
+
+  if (refFiles.some((f) => f.content)) {
+    parts.push(
+      '## REFERENCE FILES — Follow these patterns EXACTLY for naming, imports, types, and structure\n'
+    );
+    for (const file of refFiles) {
+      if (file.content) {
+        parts.push(`### ${file.path}\n\`\`\`typescript\n${file.content}\n\`\`\`\n`);
+      }
+    }
+  }
+
+  for (const file of otherFiles) {
     if (file.content) {
       parts.push(`## ${file.path}\n\`\`\`typescript\n${file.content}\n\`\`\`\n`);
     }

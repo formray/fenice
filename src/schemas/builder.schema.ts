@@ -89,6 +89,7 @@ export const BuilderPlanFileTypeEnum = z.enum([
   'route',
   'test',
   'config',
+  'middleware',
 ]);
 
 export const BuilderPlanFileSchema = z.object({

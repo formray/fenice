@@ -198,7 +198,7 @@ async function runToolLoop(config: ToolLoopConfig): Promise<GenerationResult> {
             continue;
           }
 
-          const pathError = validateFilePath(path, 'created');
+          const pathError = validateFilePath(path, 'created', allowedPlanPaths);
           if (pathError) {
             violations.push({ file: path, reason: pathError });
             toolResults.push({
@@ -258,7 +258,7 @@ async function runToolLoop(config: ToolLoopConfig): Promise<GenerationResult> {
 
           // Allow modify on files created in this same generation session
           const effectiveAction = createdPaths.has(path) ? 'created' : 'modified';
-          const pathError = validateFilePath(path, effectiveAction);
+          const pathError = validateFilePath(path, effectiveAction, allowedPlanPaths);
           if (pathError) {
             violations.push({ file: path, reason: pathError });
             toolResults.push({

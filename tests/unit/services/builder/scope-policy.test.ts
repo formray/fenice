@@ -60,9 +60,21 @@ describe('validateFilePath', () => {
       expect(result).toContain('not in allowed modify list');
     });
 
-    it('should reject modifying forbidden files', () => {
+    it('should reject modifying forbidden files without plan approval', () => {
       const result = validateFilePath('src/middleware/auth.ts', 'modified');
       expect(result).toContain('Forbidden path');
+    });
+
+    it('should allow modifying forbidden files when plan approves them', () => {
+      const planPaths = new Set(['src/middleware/auth.ts']);
+      const result = validateFilePath('src/middleware/auth.ts', 'modified', planPaths);
+      expect(result).toBeNull();
+    });
+
+    it('should still reject hard-forbidden files even with plan approval', () => {
+      const planPaths = new Set(['.env', 'package.json']);
+      expect(validateFilePath('.env', 'modified', planPaths)).toContain('Forbidden path');
+      expect(validateFilePath('package.json', 'modified', planPaths)).toContain('Forbidden path');
     });
   });
 

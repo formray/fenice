@@ -254,13 +254,13 @@ ${fileIndexSection}
 }
 
 Rules:
-- type must be one of: schema, model, service, route, test
+- type must be one of: schema, model, service, route, test, middleware, config
 - action must be one of: create, modify
 - taskType must be one of: new-resource, refactor, bugfix, schema-migration, test-gen, doc-gen
 - contextFiles should list existing files the generator needs to read for context
-- Only include files in src/schemas/, src/models/, src/services/, src/routes/, tests/
+- Files can be in src/schemas/, src/models/, src/services/, src/routes/, src/middleware/, src/utils/, tests/, or src/index.ts
 - Follow the project's kebab-case naming convention
-- Generate files in dependency order: schema → model → service → route → test
+- Generate files in dependency order: schema → model → service → middleware → route → test → config
 - Output ONLY the JSON object, no markdown fences, no explanation
 `;
 }
