@@ -61,7 +61,10 @@ export async function validateProject(
   // Run only generated test files (not the entire suite — pre-existing integration
   // tests may hardcode counts that break when new routes are added)
   const testFiles = (generatedFiles ?? []).filter((f) => f.startsWith('tests/'));
-  const testArgs = testFiles.length > 0 ? ['vitest', 'run', ...testFiles] : ['vitest', 'run'];
+  const testArgs =
+    testFiles.length > 0
+      ? ['vitest', 'run', '--reporter=verbose', ...testFiles]
+      : ['vitest', 'run', '--reporter=verbose'];
   const test = await runStep('test', npx, testArgs, projectRoot);
   steps.push(test);
 

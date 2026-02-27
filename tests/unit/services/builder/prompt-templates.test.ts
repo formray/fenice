@@ -21,43 +21,21 @@ const ALL_TASK_TYPES: TaskType[] = [
 ];
 
 describe('BUILDER_BASE_PROMPT', () => {
-  it('should contain critical rules', () => {
+  it('should contain critical TypeScript rules', () => {
     expect(BUILDER_BASE_PROMPT).toContain('.js');
     expect(BUILDER_BASE_PROMPT).toContain('exactOptionalPropertyTypes');
-    expect(BUILDER_BASE_PROMPT).toContain('loadEnv');
+    expect(BUILDER_BASE_PROMPT).toContain('noUncheckedIndexedAccess');
+    expect(BUILDER_BASE_PROMPT).toContain('newline');
   });
 
-  it('should contain naming conventions and instructions', () => {
-    expect(BUILDER_BASE_PROMPT).toContain('kebab-case');
-    expect(BUILDER_BASE_PROMPT).toContain('PascalCase');
-    expect(BUILDER_BASE_PROMPT).toContain('tools');
+  it('should instruct to copy reference patterns', () => {
+    expect(BUILDER_BASE_PROMPT).toContain('COPY');
+    expect(BUILDER_BASE_PROMPT).toContain('reference');
   });
 
-  it('should contain Zod v4 API section with correct methods', () => {
-    expect(BUILDER_BASE_PROMPT).toContain('z.email()');
-    expect(BUILDER_BASE_PROMPT).toContain('z.url()');
-    expect(BUILDER_BASE_PROMPT).toContain('z.iso.datetime()');
-    expect(BUILDER_BASE_PROMPT).toContain('.issues');
-  });
-
-  it('should contain route pattern rules', () => {
-    expect(BUILDER_BASE_PROMPT).toContain('OpenAPIHono');
-    expect(BUILDER_BASE_PROMPT).toContain('AuthEnv');
-    expect(BUILDER_BASE_PROMPT).toContain("c.get('userId')");
-    expect(BUILDER_BASE_PROMPT).toContain('NO try/catch in route handlers');
-  });
-
-  it('should contain service pattern rules', () => {
-    expect(BUILDER_BASE_PROMPT).toContain('NotFoundError');
-    expect(BUILDER_BASE_PROMPT).toContain('cursor-based');
-    expect(BUILDER_BASE_PROMPT).toContain('findByIdAndUpdate');
-  });
-
-  it('should contain error class reference', () => {
-    expect(BUILDER_BASE_PROMPT).toContain('NotFoundError');
-    expect(BUILDER_BASE_PROMPT).toContain('ForbiddenError');
-    expect(BUILDER_BASE_PROMPT).toContain('ValidationError');
-    expect(BUILDER_BASE_PROMPT).toContain('NotAuthorizedError');
+  it('should contain generation instructions', () => {
+    expect(BUILDER_BASE_PROMPT).toContain('COMPLETE');
+    expect(BUILDER_BASE_PROMPT).toContain('not scaffolds');
   });
 });
 
@@ -75,9 +53,9 @@ describe('buildSystemPrompt', () => {
     for (const taskType of ALL_TASK_TYPES) {
       const prompt = buildSystemPrompt(taskType);
       expect(prompt).toContain('.js');
-      expect(prompt).toContain('kebab-case');
-      expect(prompt).toContain('z.iso.datetime()');
-      expect(prompt).toContain('tools');
+      expect(prompt).toContain('exactOptionalPropertyTypes');
+      expect(prompt).toContain('noUncheckedIndexedAccess');
+      expect(prompt).toContain('newline');
     }
   });
 

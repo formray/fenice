@@ -106,7 +106,7 @@ describe('validateProject', () => {
     const calls = mockExecFile.mock.calls as unknown[][];
     expect(calls[0]?.[1]).toEqual(['tsc', '--noEmit']);
     expect(calls[1]?.[1]).toEqual(['eslint', 'src', 'tests']);
-    expect(calls[2]?.[1]).toEqual(['vitest', 'run']);
+    expect(calls[2]?.[1]).toEqual(['vitest', 'run', '--reporter=verbose']);
   });
 });
 

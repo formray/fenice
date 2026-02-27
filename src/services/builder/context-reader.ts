@@ -206,10 +206,11 @@ const DEFAULT_CONTEXT_FILES = [
   'src/services/user.service.ts',
   'src/routes/user.routes.ts',
   'src/utils/query-builder.ts',
+  'tests/unit/schemas/user.schema.test.ts',
   'src/index.ts',
 ];
 
-const DEFAULT_MAX_CONTEXT_CHARS = 50_000; // ~12500 tokens at ~4 chars/token
+const DEFAULT_MAX_CONTEXT_CHARS = 80_000; // ~20000 tokens — golden CRUD needs space
 
 /**
  * Reads requested contextFiles from disk; falls back to DEFAULT_CONTEXT_FILES if empty.
@@ -301,9 +302,19 @@ export function formatDynamicContext(bundle: DynamicContextBundle): string {
   const otherFiles = bundle.contextFiles.filter((f) => !REFERENCE_FILE_SET.has(f.path));
 
   if (refFiles.some((f) => f.content)) {
-    parts.push(
-      '## REFERENCE FILES — Follow these patterns EXACTLY for naming, imports, types, and structure\n'
-    );
+    parts.push(`## Golden CRUD Reference — COPY these patterns exactly
+
+The following files form a complete, working CRUD (User) that passes typecheck, lint, and tests.
+Your task is to create a NEW resource that follows the EXACT SAME structure, adapted for the requested entity.
+
+COPY these patterns — do NOT improvise:
+- Zod schemas: use z.iso.datetime(), z.email(), NOT z.string().datetime()
+- Mongoose model: Document interface pattern, toJSON transform with id
+- Service: pagination with decodeCursor/encodeCursor, cursor?: string | undefined
+- Routes: createRoute() pattern, c.req.valid() usage, conditional spread for optional params
+- Query builders: build filter objects without spreading indexed values
+- Tests: describe/it blocks, safeParse assertions, vi.mock patterns
+`);
     for (const file of refFiles) {
       if (file.content) {
         parts.push(`### ${file.path}\n\`\`\`typescript\n${file.content}\n\`\`\`\n`);
