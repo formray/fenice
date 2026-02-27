@@ -13,6 +13,7 @@ vi.mock('node:fs/promises', () => ({
       '/project/src/schemas/common.schema.ts': 'export const ErrorResponseSchema = z.object({});',
       '/project/src/schemas/auth.schema.ts': 'export const LoginSchema = z.object({});',
       '/project/src/routes/health.routes.ts': 'export const healthRouter = new OpenAPIHono();',
+      '/project/src/utils/query-builder.ts': 'export function buildUserQuery() {}',
       '/project/src/index.ts': 'export const app = new OpenAPIHono();',
     };
 
@@ -151,6 +152,7 @@ describe('buildDynamicContext', () => {
     expect(paths).toContain('src/models/user.model.ts');
     expect(paths).toContain('src/services/user.service.ts');
     expect(paths).toContain('src/routes/user.routes.ts');
+    expect(paths).toContain('src/utils/query-builder.ts');
     expect(paths).toContain('src/index.ts');
     // Plan-specific file appended after reference files
     expect(paths).toContain('src/routes/health.routes.ts');
@@ -168,12 +170,13 @@ describe('buildDynamicContext', () => {
   it('should use DEFAULT_CONTEXT_FILES when contextFiles is empty', async () => {
     const bundle = await buildDynamicContext('/project', []);
 
-    expect(bundle.contextFiles).toHaveLength(5);
+    expect(bundle.contextFiles).toHaveLength(6);
     expect(bundle.contextFiles.map((f) => f.path)).toEqual([
       'src/schemas/user.schema.ts',
       'src/models/user.model.ts',
       'src/services/user.service.ts',
       'src/routes/user.routes.ts',
+      'src/utils/query-builder.ts',
       'src/index.ts',
     ]);
   });
@@ -198,8 +201,8 @@ describe('buildDynamicContext', () => {
 
     // Reference files should still be present + nonexistent returns empty
     const nonEmpty = bundle.contextFiles.filter((f) => f.content.length > 0);
-    // All 5 reference files exist in mocks, nonexistent.ts does not
-    expect(nonEmpty).toHaveLength(5);
+    // All 6 reference files exist in mocks, nonexistent.ts does not
+    expect(nonEmpty).toHaveLength(6);
     expect(nonEmpty.map((f) => f.path)).toContain('src/schemas/user.schema.ts');
     // nonexistent should be in the list but with empty content
     const missing = bundle.contextFiles.find((f) => f.path === 'src/nonexistent.ts');

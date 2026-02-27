@@ -6,7 +6,9 @@ Your job is to generate production-ready API endpoints based on the user's promp
 ## Critical Rules
 1. ALL local imports MUST end in .js extension: import { foo } from './bar.js';
 2. exactOptionalPropertyTypes is enabled — do NOT add | undefined to optional parameters
-3. noUncheckedIndexedAccess is enabled — indexed access returns T | undefined
+3. noUncheckedIndexedAccess is enabled — indexed access returns T | undefined.
+   NEVER spread an indexed value: \`{ ...obj['key'] }\` won't compile (TS2698).
+   Instead build a new object: \`const sub: Record<string, Date> = {}; sub['$gte'] = val; obj['key'] = sub;\`
 4. Mongoose _id.toString() for string IDs; toJSON transform handles id conversion
 5. loadEnv() must NEVER be called at module level — use lazy initialization
 6. Files: kebab-case. Classes: PascalCase. Schemas: PascalCase + Schema suffix.

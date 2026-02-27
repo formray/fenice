@@ -205,6 +205,7 @@ const DEFAULT_CONTEXT_FILES = [
   'src/models/user.model.ts',
   'src/services/user.service.ts',
   'src/routes/user.routes.ts',
+  'src/utils/query-builder.ts',
   'src/index.ts',
 ];
 
