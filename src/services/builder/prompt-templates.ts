@@ -16,6 +16,37 @@ Your job is to generate production-ready API endpoints by COPYING the reference 
 3. noUncheckedIndexedAccess: indexed access returns T | undefined. NEVER spread indexed values.
 4. Every file MUST end with a newline character.
 
+## Resource Ownership
+Every user-facing resource MUST include a \`userId\` field:
+- Schema: add \`userId: z.string()\` to the main schema
+- Model: add \`userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true }\`
+- Service: all query methods (findAll, findById, update, delete) MUST filter by userId
+- Routes: pass \`c.get('userId')\` from the auth context to every service call
+- Create: store the authenticated user's ID as the resource owner
+- Read/Update/Delete: only return/modify resources where userId matches the caller
+
+Never generate a user-facing CRUD without userId scoping. The only exception is if the prompt explicitly says "public resource" or "shared resource".
+
+## Route Authorization
+For mutation routes (PATCH, DELETE) on owned resources:
+- The route handler must verify the resource belongs to the requesting user OR the user has admin role
+- Pattern: fetch the resource first, compare resource.userId with c.get('userId'), throw ForbiddenError if mismatch
+- Admin users (role === 'admin') bypass ownership checks
+
+## Cursor Pagination
+When using CursorPaginationSchema, always restrict the \`sort\` field to an allowlist of valid fields for the resource:
+\`\`\`typescript
+CursorPaginationSchema.omit({ sort: true }).extend({
+  sort: z.enum(['createdAt', 'updatedAt', '<resource-specific-fields>']).default('createdAt'),
+})
+\`\`\`
+Never pass an unvalidated sort string to MongoDB.
+
+## Test Requirements
+- Schema tests: validate all schemas (required fields, optional fields, edge cases) — ALWAYS generate these
+- Query builder tests: if you generate a filter/query builder function, add unit tests for it (it's a pure function, no DB needed)
+- Test the filter function with: empty params, each filter individually, combined filters, edge cases (empty string search, boundary dates)
+
 ## Instructions
 - Generate COMPLETE, working code — not scaffolds or placeholders
 - COPY the reference files and adapt for the new entity — do not deviate from their patterns

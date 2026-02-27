@@ -37,6 +37,26 @@ describe('BUILDER_BASE_PROMPT', () => {
     expect(BUILDER_BASE_PROMPT).toContain('COMPLETE');
     expect(BUILDER_BASE_PROMPT).toContain('not scaffolds');
   });
+
+  it('should contain resource ownership rules', () => {
+    expect(BUILDER_BASE_PROMPT).toContain('userId');
+    expect(BUILDER_BASE_PROMPT).toContain('Resource Ownership');
+  });
+
+  it('should contain route authorization rules', () => {
+    expect(BUILDER_BASE_PROMPT).toContain('Route Authorization');
+    expect(BUILDER_BASE_PROMPT).toContain('ForbiddenError');
+  });
+
+  it('should contain sort allowlist rule', () => {
+    expect(BUILDER_BASE_PROMPT).toContain('Cursor Pagination');
+    expect(BUILDER_BASE_PROMPT).toContain('allowlist');
+  });
+
+  it('should contain test coverage rules', () => {
+    expect(BUILDER_BASE_PROMPT).toContain('Test Requirements');
+    expect(BUILDER_BASE_PROMPT).toContain('Query builder tests');
+  });
 });
 
 describe('TASK_PROMPTS', () => {

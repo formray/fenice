@@ -48,5 +48,17 @@ describe('query-builder', () => {
       expect(createdAt).toHaveProperty('$gte');
       expect(createdAt).not.toHaveProperty('$lte');
     });
+
+    it('should escape regex special characters in search', () => {
+      const filter = buildUserFilter({ search: 'test.*+?^${}()|[]\\' });
+      expect(filter).toHaveProperty('$or');
+      // Should not throw when constructing the regex
+      const orArr = filter['$or'] as { email: { $regex: RegExp } }[];
+      const regex = orArr[0]?.email.$regex;
+      expect(regex).toBeInstanceOf(RegExp);
+      // The special chars should be escaped — should NOT match arbitrary strings
+      expect(regex?.test('test-anything')).toBe(false);
+      expect(regex?.test('test.*+?^${}()|[]\\')).toBe(true);
+    });
   });
 });

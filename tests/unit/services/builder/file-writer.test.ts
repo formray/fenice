@@ -32,7 +32,7 @@ describe('writeGeneratedFiles', () => {
     expect(mockMkdir).toHaveBeenCalledWith('/project/src/schemas', { recursive: true });
     expect(mockWriteFile).toHaveBeenCalledWith(
       '/project/src/schemas/product.schema.ts',
-      'export const ProductSchema = z.object({});',
+      'export const ProductSchema = z.object({});\n',
       'utf-8'
     );
   });

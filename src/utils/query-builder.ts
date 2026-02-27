@@ -6,11 +6,15 @@ interface UserFilterParams {
   createdBefore?: string | undefined;
 }
 
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 export function buildUserFilter(params: UserFilterParams): Record<string, unknown> {
   const filter: Record<string, unknown> = {};
 
   if (params.search) {
-    const regex = new RegExp(params.search, 'i');
+    const regex = new RegExp(escapeRegex(params.search), 'i');
     filter['$or'] = [
       { email: { $regex: regex } },
       { username: { $regex: regex } },

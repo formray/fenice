@@ -185,7 +185,8 @@ async function runToolLoop(config: ToolLoopConfig): Promise<GenerationResult> {
 
         if (toolName === 'write_file') {
           const path = input['path'] ?? '';
-          const content = input['content'] ?? '';
+          const rawContent = input['content'] ?? '';
+          const content = rawContent.endsWith('\n') ? rawContent : rawContent + '\n';
 
           if (allowedPlanPaths && !allowedPlanPaths.has(path)) {
             violations.push({ file: path, reason: 'Path not in approved plan' });
@@ -243,7 +244,8 @@ async function runToolLoop(config: ToolLoopConfig): Promise<GenerationResult> {
           });
         } else if (toolName === 'modify_file') {
           const path = input['path'] ?? '';
-          const content = input['content'] ?? '';
+          const rawContent = input['content'] ?? '';
+          const content = rawContent.endsWith('\n') ? rawContent : rawContent + '\n';
 
           if (allowedPlanPaths && !allowedPlanPaths.has(path)) {
             violations.push({ file: path, reason: 'Path not in approved plan' });

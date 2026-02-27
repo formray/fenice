@@ -21,9 +21,10 @@ export async function writeGeneratedFiles(
 
     const fullPath = join(projectRoot, file.path);
     const dir = dirname(fullPath);
+    const content = file.content.endsWith('\n') ? file.content : file.content + '\n';
 
     await mkdir(dir, { recursive: true });
-    await writeFile(fullPath, file.content, 'utf-8');
+    await writeFile(fullPath, content, 'utf-8');
 
     writtenPaths.push(file.path);
     logger.info({ path: file.path, action: file.action }, 'File written');
