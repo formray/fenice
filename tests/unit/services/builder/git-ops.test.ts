@@ -43,6 +43,8 @@ const {
   commitInWorktree,
   pushFromWorktree,
   removeWorktree,
+  commitToMain,
+  revertCommit,
 } = await import('../../../../src/services/builder/git-ops.js');
 
 describe('git-ops', () => {
@@ -335,6 +337,42 @@ describe('git-ops', () => {
       await expect(
         removeWorktree('/project', '/tmp/gone', 'builder/gone')
       ).resolves.toBeUndefined();
+    });
+  });
+
+  describe('commitToMain', () => {
+    it('should stage files and commit on current branch', async () => {
+      const hash = await commitToMain('/project', 'job-100', 'Add tasks endpoint', [
+        'src/schemas/task.schema.ts',
+        'src/models/task.model.ts',
+      ]);
+
+      expect(hash).toBe('abc123');
+      expect(mockAdd).toHaveBeenCalledWith([
+        'src/schemas/task.schema.ts',
+        'src/models/task.model.ts',
+      ]);
+      const commitMsg = mockCommit.mock.calls[0]?.[0] as string;
+      expect(commitMsg).toContain('feat(builder):');
+      expect(commitMsg).toContain('Add tasks endpoint');
+      expect(commitMsg).toContain('Co-Authored-By: Claude Opus 4.6');
+      expect(commitMsg).toContain('job-100');
+      expect(mockCommit.mock.calls[0]?.[2]).toEqual({ '--no-verify': null });
+    });
+
+    it('should truncate long prompts', async () => {
+      await commitToMain('/project', 'job-100', 'A'.repeat(100), ['file.ts']);
+      const commitMsg = mockCommit.mock.calls[0]?.[0] as string;
+      expect(commitMsg).toContain('...');
+    });
+  });
+
+  describe('revertCommit', () => {
+    it('should revert the specified commit', async () => {
+      const hash = await revertCommit('/project', 'abc123');
+
+      expect(hash).toBe('abc123');
+      expect(mockRaw).toHaveBeenCalledWith(['revert', 'abc123', '--no-edit', '--no-verify']);
     });
   });
 });
