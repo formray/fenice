@@ -391,7 +391,8 @@ export class BuilderService {
         await this.updateStatus(jobId, currentStep);
         this.notifier?.emitProgress(jobId, currentStep);
         let currentFiles = result.files;
-        let validation = await validateProject(wtPath);
+        const generatedPaths = currentFiles.map((f) => f.path);
+        let validation = await validateProject(wtPath, generatedPaths);
 
         // Level 1: Repair (1 attempt — second repair never converges, just burns tokens)
         const MAX_REPAIR_ATTEMPTS = 1;
@@ -427,7 +428,10 @@ export class BuilderService {
           totalTokens.input += repairResult.tokenUsage.inputTokens;
           totalTokens.output += repairResult.tokenUsage.outputTokens;
 
-          validation = await validateProject(wtPath);
+          validation = await validateProject(
+            wtPath,
+            currentFiles.map((f) => f.path)
+          );
           if (validation.passed) {
             logger.info({ jobId, attempt }, 'Repair succeeded');
           }

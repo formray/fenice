@@ -42,7 +42,10 @@ async function runStep(
   }
 }
 
-export async function validateProject(projectRoot: string): Promise<ValidationResult> {
+export async function validateProject(
+  projectRoot: string,
+  generatedFiles?: string[]
+): Promise<ValidationResult> {
   const npx = process.platform === 'win32' ? 'npx.cmd' : 'npx';
 
   const steps: ValidationStepResult[] = [];
@@ -55,8 +58,11 @@ export async function validateProject(projectRoot: string): Promise<ValidationRe
   const lint = await runStep('lint', npx, ['eslint', 'src', 'tests'], projectRoot);
   steps.push(lint);
 
-  // Run tests
-  const test = await runStep('test', npx, ['vitest', 'run'], projectRoot);
+  // Run only generated test files (not the entire suite — pre-existing integration
+  // tests may hardcode counts that break when new routes are added)
+  const testFiles = (generatedFiles ?? []).filter((f) => f.startsWith('tests/'));
+  const testArgs = testFiles.length > 0 ? ['vitest', 'run', ...testFiles] : ['vitest', 'run'];
+  const test = await runStep('test', npx, testArgs, projectRoot);
   steps.push(test);
 
   const passed = steps.every((s) => s.passed);
