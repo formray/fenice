@@ -37,7 +37,7 @@ async function runStep(
   } catch (err: unknown) {
     const error = err as { stdout?: string; stderr?: string; message?: string };
     const output = ((error.stdout ?? '') + (error.stderr ?? '') + (error.message ?? '')).trim();
-    logger.warn({ step, output: output.slice(0, 500) }, 'Validation step failed');
+    logger.warn({ step, output: output.slice(0, 2000) }, 'Validation step failed');
     return { step, passed: false, output: output.slice(0, 2000) };
   }
 }
