@@ -20,8 +20,10 @@ import {
   createWorktree,
   createDraftWorktree,
   commitInWorktree,
+  commitToMain,
   pushFromWorktree,
   removeWorktree,
+  revertCommit,
 } from './builder/git-ops.js';
 import { createPullRequest } from './builder/github-pr.js';
 import { validateProject, formatValidationErrors } from './builder/validator.js';
@@ -156,6 +158,34 @@ export class BuilderService {
     this.notifier?.emitProgress(jobId, 'rejected');
   }
 
+  async rollback(jobId: string): Promise<void> {
+    const job = await BuilderJobModel.findById(jobId);
+    if (!job) throw new NotFoundError('Builder job not found');
+    if (job.status !== 'completed') {
+      throw new AppError(
+        400,
+        'INVALID_STATE',
+        `Job is in '${job.status}' state, expected 'completed'`
+      );
+    }
+
+    const result = job.result as Record<string, unknown> | undefined;
+    const commitHash = result?.['commitHash'] as string | undefined;
+    if (!commitHash) {
+      throw new AppError(
+        400,
+        'NOT_DIRECT_MODE',
+        'Cannot rollback PR-mode jobs. Close the PR instead.'
+      );
+    }
+
+    const projectRoot = this.getProjectRoot();
+    await revertCommit(projectRoot, commitHash);
+    await this.updateStatus(jobId, 'rolled_back');
+    this.notifier?.emitProgress(jobId, 'rolled_back');
+    logger.info({ jobId, commitHash }, 'Job rolled back');
+  }
+
   private async updateStatus(
     jobId: string,
     status: BuilderJobStatus,
@@ -264,6 +294,7 @@ export class BuilderService {
     options?: BuilderOptions
   ): Promise<void> {
     const isDryRun = options?.dryRun === true;
+    const isDirectMode = options?.integrationMode === 'direct';
     let currentStep: BuilderJobStatus = 'reading_context';
 
     try {
@@ -483,37 +514,66 @@ export class BuilderService {
           return;
         }
 
-        // Step 5: Push branch and create PR from worktree
-        currentStep = 'creating_pr';
-        await this.updateStatus(jobId, currentStep);
-        this.notifier?.emitProgress(jobId, currentStep);
-        const github = await this.getGitHubConfig();
-        await pushFromWorktree(wtPath, branch);
-        const pr = await createPullRequest(
-          branch,
-          prompt,
-          currentFiles,
-          jobId,
-          true,
-          github.token,
-          github.owner,
-          github.repo
-        );
-        logger.info({ jobId, prUrl: pr.prUrl, prNumber: pr.prNumber }, 'PR created');
+        if (isDirectMode) {
+          // Direct mode: write files to projectRoot and commit on main
+          currentStep = 'committing';
+          await this.updateStatus(jobId, currentStep);
+          this.notifier?.emitProgress(jobId, currentStep);
 
-        await this.updateStatus(jobId, 'completed', {
-          result: {
-            files: currentFiles,
-            prUrl: pr.prUrl,
-            prNumber: pr.prNumber,
+          // Write files to the real project root (triggers tsx watch reload)
+          await writeGeneratedFiles(projectRoot, currentFiles);
+          const commitHash = await commitToMain(
+            projectRoot,
+            jobId,
+            prompt,
+            currentFiles.map((f) => f.path)
+          );
+          logger.info({ jobId, commitHash }, 'Direct mode: committed to main');
+
+          await this.updateStatus(jobId, 'completed', {
+            result: {
+              files: currentFiles,
+              commitHash,
+              validationPassed: true,
+              tokenUsage: { inputTokens: totalTokens.input, outputTokens: totalTokens.output },
+            },
+          });
+
+          this.notifier?.emitSyntheticDeltas(jobId, currentFiles);
+          this.notifier?.emitProgress(jobId, 'completed');
+        } else {
+          // PR mode (existing behavior)
+          currentStep = 'creating_pr';
+          await this.updateStatus(jobId, currentStep);
+          this.notifier?.emitProgress(jobId, currentStep);
+          const github = await this.getGitHubConfig();
+          await pushFromWorktree(wtPath, branch);
+          const pr = await createPullRequest(
             branch,
-            validationPassed: true,
-            tokenUsage: { inputTokens: totalTokens.input, outputTokens: totalTokens.output },
-          },
-        });
+            prompt,
+            currentFiles,
+            jobId,
+            true,
+            github.token,
+            github.owner,
+            github.repo
+          );
+          logger.info({ jobId, prUrl: pr.prUrl, prNumber: pr.prNumber }, 'PR created');
 
-        this.notifier?.emitSyntheticDeltas(jobId, currentFiles);
-        this.notifier?.emitProgress(jobId, 'completed');
+          await this.updateStatus(jobId, 'completed', {
+            result: {
+              files: currentFiles,
+              prUrl: pr.prUrl,
+              prNumber: pr.prNumber,
+              branch,
+              validationPassed: true,
+              tokenUsage: { inputTokens: totalTokens.input, outputTokens: totalTokens.output },
+            },
+          });
+
+          this.notifier?.emitSyntheticDeltas(jobId, currentFiles);
+          this.notifier?.emitProgress(jobId, 'completed');
+        }
       } finally {
         // Always clean up the worktree — main checkout is never touched
         await removeWorktree(projectRoot, wtPath, branch);
