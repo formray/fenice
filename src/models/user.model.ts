@@ -89,6 +89,8 @@ const userSchema = new Schema<UserDocument>(
         delete ret['emailVerificationExpires'];
         delete ret['failedLoginAttempts'];
         delete ret['lockoutUntil'];
+        if (ret['createdAt'] instanceof Date) ret['createdAt'] = ret['createdAt'].toISOString();
+        if (ret['updatedAt'] instanceof Date) ret['updatedAt'] = ret['updatedAt'].toISOString();
         return ret;
       },
     },

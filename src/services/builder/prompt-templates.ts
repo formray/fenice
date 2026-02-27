@@ -42,6 +42,30 @@ CursorPaginationSchema.omit({ sort: true }).extend({
 \`\`\`
 Never pass an unvalidated sort string to MongoDB.
 
+## Date Serialization
+In the Mongoose model toJSON transform, always convert Date fields to ISO strings:
+\`\`\`typescript
+if (ret['createdAt'] instanceof Date) ret['createdAt'] = ret['createdAt'].toISOString();
+if (ret['updatedAt'] instanceof Date) ret['updatedAt'] = ret['updatedAt'].toISOString();
+\`\`\`
+This ensures API responses use ISO 8601 format, not locale strings.
+
+## Field Generation
+If the user prompt does not specify fields, generate a MINIMAL schema:
+- Use only obvious fields for the entity type (e.g., for "employee": firstName, lastName, email, department, position)
+- Do NOT add sensitive fields (salary, SSN, etc.) unless explicitly requested
+- Do NOT add more than 6-8 domain fields for a basic CRUD
+- Always include userId for ownership
+- Always include createdAt/updatedAt (via timestamps: true)
+The user can always ask for more fields in a follow-up generation.
+
+## Query Builder
+For every new resource with filter/search capabilities:
+- Create a \`build<Resource>Filter()\` function in \`src/utils/query-builder.ts\` (or a new file if query-builder.ts is not in the plan)
+- The function takes typed filter params and returns a MongoDB filter object
+- Use \`escapeRegex()\` for any search fields passed to \`new RegExp()\`
+- Add the query builder file to the plan and generate unit tests for it
+
 ## Test Requirements
 - Schema tests: validate all schemas (required fields, optional fields, edge cases) — ALWAYS generate these
 - Query builder tests: if you generate a filter/query builder function, add unit tests for it (it's a pure function, no DB needed)
@@ -69,10 +93,12 @@ Generate a complete CRUD resource with ALL 5 endpoints:
 Generate files in this exact order:
 1. Schema (src/schemas/<name>.schema.ts) — Zod schemas + types (Resource, ResourceCreate, ResourceUpdate)
 2. Model (src/models/<name>.model.ts) — Mongoose schema + model with toJSON transform
-3. Service (src/services/<name>.service.ts) — Business logic for all 5 CRUD operations
-4. Route (src/routes/<name>.routes.ts) — OpenAPI route definitions + handlers for all 5 endpoints
-5. Tests (tests/unit/schemas/<name>.schema.test.ts) — Schema validation tests
-6. Mount route in src/index.ts — Add import and app.route('/api/v1/<name>s', <name>Router) near the existing app.route() calls
+3. Query builder (src/utils/<name>-query-builder.ts) — Filter function with escapeRegex for search fields
+4. Service (src/services/<name>.service.ts) — Business logic for all 5 CRUD operations
+5. Route (src/routes/<name>.routes.ts) — OpenAPI route definitions + handlers for all 5 endpoints
+6. Schema tests (tests/unit/schemas/<name>.schema.test.ts) — Schema validation tests
+7. Query builder tests (tests/unit/utils/<name>-query-builder.test.ts) — Filter function unit tests
+8. Mount route in src/index.ts — Add import and app.route('/api/v1/<name>s', <name>Router) near the existing app.route() calls
 
 IMPORTANT: You MUST generate ALL 5 endpoints AND mount the route in src/index.ts. Without step 6, the endpoints are unreachable.
 `,
@@ -262,7 +288,8 @@ Rules:
 - contextFiles should list existing files the generator needs to read for context
 - Files can be in src/schemas/, src/models/, src/services/, src/routes/, src/middleware/, src/utils/, tests/, or src/index.ts
 - Follow the project's kebab-case naming convention
-- Generate files in dependency order: schema → model → service → middleware → route → test → config
+- For new-resource, ALWAYS include a query builder file (src/utils/<name>-query-builder.ts) and its tests
+- Generate files in dependency order: schema → model → query-builder → service → middleware → route → test → config
 - Output ONLY the JSON object, no markdown fences, no explanation
 `;
 }
