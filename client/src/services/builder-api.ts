@@ -1,4 +1,4 @@
-import type { BuilderJob, BuilderPlanFile, TaskType } from '../types/builder';
+import type { BuilderJob, BuilderPlanFile, TaskType, IntegrationMode } from '../types/builder';
 
 interface SubmitResponse {
   jobId: string;
@@ -8,11 +8,15 @@ export async function submitBuilderPrompt(
   token: string,
   prompt: string,
   dryRun: boolean,
-  taskType?: TaskType
+  taskType?: TaskType,
+  integrationMode?: IntegrationMode
 ): Promise<SubmitResponse> {
   const options: Record<string, unknown> = { dryRun };
   if (taskType) {
     options['taskType'] = taskType;
+  }
+  if (integrationMode) {
+    options['integrationMode'] = integrationMode;
   }
 
   const res = await fetch('/api/v1/builder/generate', {
@@ -74,5 +78,17 @@ export async function rejectBuilderJob(token: string, jobId: string): Promise<vo
   if (!res.ok) {
     const body = (await res.json().catch(() => null)) as { message?: string } | null;
     throw new Error(body?.message ?? `Reject failed (${res.status})`);
+  }
+}
+
+export async function rollbackBuilderJob(token: string, jobId: string): Promise<void> {
+  const res = await fetch(`/api/v1/builder/jobs/${encodeURIComponent(jobId)}/rollback`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as { message?: string } | null;
+    throw new Error(body?.message ?? `Rollback failed (${res.status})`);
   }
 }

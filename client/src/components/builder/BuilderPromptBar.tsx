@@ -6,6 +6,7 @@ import {
   fetchBuilderJob,
   approveBuilderJob,
   rejectBuilderJob,
+  rollbackBuilderJob,
 } from '../../services/builder-api';
 import type { BuilderPlanFile } from '../../types/builder';
 import {
@@ -54,6 +55,9 @@ export function BuilderPromptBar(): React.JSX.Element {
   const removePlanFile = useBuilderStore((s) => s.removePlanFile);
   const taskType = useBuilderStore((s) => s.taskType);
   const setTaskType = useBuilderStore((s) => s.setTaskType);
+  const integrationMode = useBuilderStore((s) => s.integrationMode);
+  const setIntegrationMode = useBuilderStore((s) => s.setIntegrationMode);
+  const commitHash = useBuilderStore((s) => s.commitHash);
 
   const visualMode = useViewStore((s) => s.visualMode);
   const theme = BUILDER_THEME[visualMode];
@@ -63,6 +67,7 @@ export function BuilderPromptBar(): React.JSX.Element {
     status !== null &&
     status !== 'completed' &&
     status !== 'completed_draft' &&
+    status !== 'rolled_back' &&
     status !== 'failed' &&
     status !== 'rejected' &&
     status !== 'plan_ready';
@@ -72,12 +77,18 @@ export function BuilderPromptBar(): React.JSX.Element {
     if (!canSubmit || !WS_TOKEN) return;
     setSubmitting(true);
     try {
-      const { jobId: newJobId } = await submitBuilderPrompt(WS_TOKEN, prompt, dryRun, taskType);
+      const { jobId: newJobId } = await submitBuilderPrompt(
+        WS_TOKEN,
+        prompt,
+        dryRun,
+        taskType,
+        integrationMode
+      );
       startJob(newJobId);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Submission failed');
     }
-  }, [canSubmit, prompt, dryRun, taskType, setSubmitting, startJob, setError]);
+  }, [canSubmit, prompt, dryRun, taskType, integrationMode, setSubmitting, startJob, setError]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -106,6 +117,16 @@ export function BuilderPromptBar(): React.JSX.Element {
       setError(err instanceof Error ? err.message : 'Reject failed');
     }
   }, [jobId, dismiss, setError]);
+
+  const handleRollback = useCallback(async () => {
+    if (!jobId || !WS_TOKEN || !commitHash) return;
+    try {
+      await rollbackBuilderJob(WS_TOKEN, jobId);
+      dismiss();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Rollback failed');
+    }
+  }, [jobId, commitHash, dismiss, setError]);
 
   // Fetch full job details when status reaches completed or failed
   useEffect(() => {
@@ -352,9 +373,67 @@ export function BuilderPromptBar(): React.JSX.Element {
         <span style={{ fontSize: '10px', color: theme.muted, lineHeight: 1.3 }}>
           {dryRun
             ? 'Generate code without writing files or creating PRs'
-            : 'Write files, create branch, and open a pull request'}
+            : integrationMode === 'direct'
+              ? 'Write files and commit directly to main'
+              : 'Write files, create branch, and open a pull request'}
         </span>
       </div>
+
+      {/* Integration mode toggle (only when live) */}
+      {!dryRun && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            marginBottom: '10px',
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setIntegrationMode(integrationMode === 'pr' ? 'direct' : 'pr')}
+            disabled={isRunning}
+            style={{
+              width: '32px',
+              height: '18px',
+              borderRadius: '9px',
+              border: 'none',
+              backgroundColor:
+                integrationMode === 'direct'
+                  ? '#f59e0b'
+                  : visualMode === 'dark'
+                    ? 'rgba(255, 255, 255, 0.15)'
+                    : 'rgba(0, 0, 0, 0.12)',
+              position: 'relative',
+              cursor: isRunning ? 'not-allowed' : 'pointer',
+              flexShrink: 0,
+              transition: 'background-color 0.2s',
+            }}
+            aria-label={`Switch to ${integrationMode === 'pr' ? 'direct' : 'PR'} mode`}
+          >
+            <div
+              style={{
+                width: '14px',
+                height: '14px',
+                borderRadius: '50%',
+                backgroundColor: '#fff',
+                position: 'absolute',
+                top: '2px',
+                left: integrationMode === 'pr' ? '2px' : '16px',
+                transition: 'left 0.2s',
+              }}
+            />
+          </button>
+          <span style={{ fontSize: '11px', color: theme.text, fontWeight: 500 }}>
+            {integrationMode === 'direct' ? 'Direct' : 'Pull Request'}
+          </span>
+          <span style={{ fontSize: '10px', color: theme.muted, lineHeight: 1.3 }}>
+            {integrationMode === 'direct'
+              ? 'Commit to main — live reload, rollback available'
+              : 'Create a PR for review before merging'}
+          </span>
+        </div>
+      )}
 
       {/* Character count hint */}
       {prompt.length > 0 && prompt.length < 10 && (
@@ -380,7 +459,7 @@ export function BuilderPromptBar(): React.JSX.Element {
                 color:
                   status === 'completed'
                     ? theme.successText
-                    : status === 'completed_draft'
+                    : status === 'completed_draft' || status === 'rolled_back'
                       ? theme.draftText
                       : status === 'failed' || status === 'rejected'
                         ? theme.errorText
@@ -392,6 +471,7 @@ export function BuilderPromptBar(): React.JSX.Element {
             </span>
             {(status === 'completed' ||
               status === 'completed_draft' ||
+              status === 'rolled_back' ||
               status === 'failed' ||
               status === 'rejected') && (
               <button
@@ -681,6 +761,62 @@ export function BuilderPromptBar(): React.JSX.Element {
           files={files}
           theme={theme}
         />
+      )}
+
+      {/* Direct mode result (committed to main) */}
+      {status === 'completed' && commitHash && (
+        <div style={{ marginBottom: '10px' }}>
+          <div
+            style={{
+              fontSize: '12px',
+              color: theme.successText,
+              marginBottom: '6px',
+              fontWeight: 500,
+            }}
+          >
+            Committed to main
+          </div>
+          <div
+            style={{
+              fontSize: '11px',
+              color: theme.muted,
+              fontFamily: 'ui-monospace, "SF Mono", Menlo, monospace',
+              marginBottom: '8px',
+            }}
+          >
+            Commit: {commitHash}
+          </div>
+          <button
+            type="button"
+            onClick={() => void handleRollback()}
+            style={{
+              padding: '6px 14px',
+              borderRadius: '6px',
+              border: `1px solid ${theme.errorText}`,
+              backgroundColor: 'transparent',
+              color: theme.errorText,
+              fontSize: '11px',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            Rollback
+          </button>
+        </div>
+      )}
+
+      {/* Rolled back status */}
+      {status === 'rolled_back' && (
+        <div
+          style={{
+            fontSize: '12px',
+            color: theme.draftText,
+            marginBottom: '10px',
+            lineHeight: 1.4,
+          }}
+        >
+          Changes have been reverted from main.
+        </div>
       )}
 
       {/* Result panel (completed) */}

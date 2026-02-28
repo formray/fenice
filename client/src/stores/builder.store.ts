@@ -5,6 +5,7 @@ import type {
   BuilderProgressPayload,
   BuilderPlanFile,
   TaskType,
+  IntegrationMode,
   DiffEntry,
   PlanCoverage,
   BuilderJobResult,
@@ -19,6 +20,7 @@ interface BuilderState {
   statusMessage: string | null;
   prompt: string;
   dryRun: boolean;
+  integrationMode: IntegrationMode;
   files: BuilderGeneratedFile[];
   logs: string[];
   error: string | null;
@@ -33,11 +35,13 @@ interface BuilderState {
   prUrl: string | null;
   prNumber: number | null;
   branch: string | null;
+  commitHash: string | null;
 
   setExpanded: (expanded: boolean) => void;
   toggleExpanded: () => void;
   setPrompt: (prompt: string) => void;
   setDryRun: (dryRun: boolean) => void;
+  setIntegrationMode: (mode: IntegrationMode) => void;
   setSubmitting: (submitting: boolean) => void;
   setTaskType: (taskType: TaskType) => void;
   setFullResult: (result: BuilderJobResult) => void;
@@ -59,6 +63,7 @@ const initialState = {
   statusMessage: null as string | null,
   prompt: '',
   dryRun: true,
+  integrationMode: 'pr' as IntegrationMode,
   files: [] as BuilderGeneratedFile[],
   logs: [] as string[],
   error: null as string | null,
@@ -73,6 +78,7 @@ const initialState = {
   prUrl: null as string | null,
   prNumber: null as number | null,
   branch: null as string | null,
+  commitHash: null as string | null,
 };
 
 export const useBuilderStore = create<BuilderState>((set, get) => ({
@@ -82,6 +88,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
   toggleExpanded: () => set((s) => ({ expanded: !s.expanded })),
   setPrompt: (prompt) => set({ prompt }),
   setDryRun: (dryRun) => set({ dryRun }),
+  setIntegrationMode: (integrationMode) => set({ integrationMode }),
   setSubmitting: (submitting) => set({ submitting }),
 
   setTaskType: (taskType) => set({ taskType }),
@@ -98,6 +105,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
       prUrl: result.prUrl ?? null,
       prNumber: result.prNumber ?? null,
       branch: result.branch ?? null,
+      commitHash: result.commitHash ?? null,
     }),
 
   startJob: (jobId) =>
@@ -118,6 +126,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
       prUrl: null,
       prNumber: null,
       branch: null,
+      commitHash: null,
     }),
 
   applyProgress: (payload) => {
@@ -160,6 +169,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
       prUrl: null,
       prNumber: null,
       branch: null,
+      commitHash: null,
     }),
 
   reset: () => set(initialState),

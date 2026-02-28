@@ -100,8 +100,10 @@ export const STATUS_LABELS: Record<BuilderJobStatus, string> = {
   writing_files: 'Writing files...',
   validating: 'Running validation...',
   creating_pr: 'Creating pull request...',
+  committing: 'Committing to main...',
   completed: 'Completed',
   completed_draft: 'Completed (draft)',
+  rolled_back: 'Rolled back',
   failed: 'Failed',
   rejected: 'Rejected',
 };
@@ -115,6 +117,7 @@ export const PROGRESS_ORDER: BuilderJobStatus[] = [
   'writing_files',
   'validating',
   'creating_pr',
+  'committing',
   'completed',
 ];
 

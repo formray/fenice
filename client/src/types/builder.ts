@@ -12,10 +12,14 @@ export type BuilderJobStatus =
   | 'writing_files'
   | 'validating'
   | 'creating_pr'
+  | 'committing'
   | 'completed'
   | 'completed_draft'
+  | 'rolled_back'
   | 'failed'
   | 'rejected';
+
+export type IntegrationMode = 'pr' | 'direct';
 
 export type TaskType =
   | 'new-resource'
@@ -47,6 +51,8 @@ export interface BuilderJobResult {
   prUrl?: string | undefined;
   prNumber?: number | undefined;
   branch?: string | undefined;
+  commitHash?: string | undefined;
+  integrationMode?: IntegrationMode | undefined;
   validationPassed?: boolean | undefined;
   validationErrors?: string[] | undefined;
   tokenUsage?: { inputTokens: number; outputTokens: number } | undefined;

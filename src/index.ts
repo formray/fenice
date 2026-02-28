@@ -103,7 +103,7 @@ app.openAPIRegistry.registerComponent('securitySchemes', 'Bearer', {
 });
 
 // --- OpenAPI JSON spec ---
-app.doc('/openapi', {
+app.doc('/openapi', (c) => ({
   openapi: '3.1.0',
   info: {
     title: 'FENICE API',
@@ -111,8 +111,8 @@ app.doc('/openapi', {
     description:
       'AI-native, production-ready backend API — Formray Engineering Guidelines compliant',
   },
-  servers: [{ url: `http://localhost:${process.env['PORT'] ?? 3000}` }],
-});
+  servers: [{ url: new URL(c.req.url).origin }],
+}));
 
 // --- Scalar interactive docs ---
 app.get(
