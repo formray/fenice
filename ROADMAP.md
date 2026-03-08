@@ -54,6 +54,7 @@ Two complementary tracks evolving together. See [design doc](docs/plans/2026-02-
 | M3 | Agent | AI Builder: prompt-to-PR with safety gates, validation, self-repair |
 | M3.1 | Agent | Two-phase builder: plan-then-generate with user approval gate |
 | M4 | 3D | Atmosphere — Post-processing, skybox, material upgrade, dark cosmic palette, ultra quality mode, cinematic camera, Galaxy Settings panel |
+| M5 | Agent | Builder v2 — Smart context (import resolver), multi-retry recovery (strategy-based), search_files + list_files tools, improved task prompts |
 
 ### Active Roadmap
 
@@ -71,7 +72,7 @@ Track A (3D Visual)            Track B (Agent)
 
 | Milestone | Track | Status | Dependencies | Description |
 |-----------|-------|--------|--------------|-------------|
-| **M5** | Agent | Active | M3.1 | **Builder v2** — Broader task types (refactoring, bug fix, test gen), smarter context reading, multi-retry recovery, enhanced dry-run |
+| **M5** | Agent | Done | M3.1 | **Builder v2** — Smart context (import resolver), multi-retry recovery (3 strategies), search_files/list_files tools, improved task prompts |
 | **M6** | 3D | — | M4 | **Cosmos** — Services as planetary systems, endpoints as orbiting planets (shape by HTTP method), curved luminous routes, auth gate as wormhole, orbital navigation |
 | **M7** | Bridge | — | M5 + M6 | **MCP Live** — Real MCP server with executable tools, agent connection protocol, agent presence in 3D cosmos, activity trails, agent HUD |
 | **M8** | Bridge | — | M6 + M7 | **Observability** — OTel data pipeline to 3D, traffic particles on routes, planet heatmaps (latency/errors), anomaly detection with visual alerts |

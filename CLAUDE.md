@@ -228,7 +228,7 @@ POST /api/v1/builder/generate  (JWT + admin + rate limit 5/hour)
 - **Property testing:** fast-check for schema validation properties
 - **Coverage:** v8 provider, thresholds at 60/40/50/60 (stmts/branches/funcs/lines). DB-dependent files (services, models, production adapters) excluded — need MongoDB integration tests.
 - **Test structure:** `tests/unit/`, `tests/integration/`, `tests/properties/`
-- **Current status:** 585 server tests across 66 test files + 159 client tests across 12 test files, all passing
+- **Current status:** 589 server tests across 66 test files + 159 client tests across 12 test files, all passing
 - **TDD preferred:** Write tests alongside or before implementation
 
 ## Common Gotchas

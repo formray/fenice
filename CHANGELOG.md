@@ -12,12 +12,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **M5 Import Resolver**: dependency-aware context selection — follows import chains to auto-include relevant files for refactor, bugfix, test-gen, and schema-migration tasks
 - **M5 Strategy-based repair**: multi-retry recovery with targeted strategies (typecheck -> lint -> test -> all), up to 3 repair attempts instead of 1
 - **M5 Repair metadata**: `repairAttempts` and `repairStrategies` fields in job result for observability on draft PRs
-- **M5 tests**: 31 new tests for import-resolver and strategy-based validator (744 total, up from 713)
+- **M5 Builder tools**: `search_files` (regex grep across project) and `list_files` (directory listing) for refactoring and exploration
+- **M5 Improved prompts**: step-by-step workflows for refactor, bugfix, test-gen, and schema-migration tasks
+- **M5 tests**: 35 new tests for import-resolver, strategy-based validator, and new tools (748 total, up from 713)
 
 ### Changed
 
 - Builder context reader now accepts `inferredFiles` parameter for dependency-resolved context
 - Builder service uses `categorizeErrors` + `pickRepairStrategy` instead of generic `formatValidationErrors` for repair loop
+- Task prompts expanded with concrete workflows and tool usage guidance
 
 ---
 
