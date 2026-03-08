@@ -107,49 +107,84 @@ IMPORTANT: You MUST generate ALL 5 endpoints AND mount the route in src/index.ts
 
   refactor: `## Task: Refactor
 
-Refactor existing code while preserving all functionality. Key guidelines:
-- Read the target files first to understand current behavior
+Refactor existing code while preserving all functionality.
+
+### Workflow
+1. **Read** the target files using read_file to understand current behavior
+2. **Search** for all references using search_files — find every import, call site, and type usage
+3. **Plan** your changes: list every file that needs updating
+4. **Modify** files in dependency order: types/schemas first, then models, services, routes
+5. **Update** ALL import paths that changed — use search_files to find them all
+6. **Update** tests to match the refactored code
+
+### Rules
 - Preserve all existing functionality — do NOT change public APIs or behavior
-- Update ALL references and imports that are affected by the refactoring
-- Verify import paths are correct after moving/renaming files
+- Update ALL references and imports affected by the refactoring
 - Keep backward compatibility unless explicitly asked to break it
-- Add or update tests to cover the refactored code
+- Use search_files to find every usage before renaming/moving anything
+- For extract refactoring: create the new file, then update the original to import from it
 `,
 
   bugfix: `## Task: Bug Fix
 
-Fix the reported bug with minimal, targeted changes. Key guidelines:
-- Read the relevant files FIRST to understand the current code
+Fix the reported bug with minimal, targeted changes.
+
+### Workflow
+1. **Read** the relevant files to understand the current code
+2. **Search** for related patterns using search_files to identify the root cause
+3. **Fix** only what is broken — minimal changes
+4. **Add** a regression test that reproduces the bug and verifies the fix
+
+### Rules
 - Identify the root cause before making any changes
-- Make minimal changes — fix only what is broken
 - Do NOT refactor or restructure unrelated code
-- Add a regression test that reproduces the bug and verifies the fix
 - If the bug is in a service, check if the route and schema are also affected
+- The regression test should fail before the fix and pass after
 `,
 
   'schema-migration': `## Task: Schema Migration
 
-Migrate the schema while maintaining backward compatibility. Key guidelines:
-- Update the Zod schema with new/changed fields
-- Update the Mongoose model to match the new schema
-- Update the service layer for any new business logic
-- Update the route handlers if request/response shapes changed
+Migrate the schema while maintaining backward compatibility.
+
+### Workflow
+1. **Read** the current schema, model, service, and route files
+2. **Update** the Zod schema with new/changed fields
+3. **Update** the Mongoose model to match the new schema
+4. **Update** the service layer for any new business logic
+5. **Update** route handlers if request/response shapes changed
+6. **Search** for other files that reference the changed types
+7. **Update** tests to cover the migration
+
+### Rules
 - Ensure backward compatibility — existing API consumers must not break
 - Add default values or optional fields where appropriate
-- Update related tests to cover the migration
+- Use search_files to find all consumers of the schema before changing it
 `,
 
   'test-gen': `## Task: Test Generation
 
-Generate comprehensive tests for existing code. Key guidelines:
-- Read the target source code FIRST to understand what to test
-- Cover happy path, edge cases, and error cases
-- Use vitest with globals: true (describe, it, expect are global)
-- Use vi.mock() for mocking dependencies (Mongoose models, services, etc.)
-- Use vi.fn() for mock functions and vi.spyOn() for spies
-- Follow the existing test patterns in the project
+Generate comprehensive tests for existing code.
+
+### Workflow
+1. **Read** the target source code using read_file to understand what to test
+2. **Read** the existing test files in the project (e.g., tests/unit/schemas/user.schema.test.ts) to match their patterns
+3. **Search** for how the target module is used — its callers and consumers — to understand edge cases
+4. **Write** tests covering: happy path, edge cases, error cases, boundary conditions
+
+### Test Patterns (vitest)
+- Use \`describe\` / \`it\` / \`expect\` as globals (no import needed — globals: true)
+- Use \`vi.mock('module-path')\` at top level for mocking dependencies
+- Use \`vi.fn()\` for mock functions, \`vi.spyOn()\` for spies
+- Use \`beforeEach(() => vi.clearAllMocks())\` to reset between tests
 - Place unit tests in tests/unit/ mirroring the src/ structure
-- Test file naming: <name>.test.ts
+- Test file naming: \`<name>.test.ts\`
+
+### Coverage Targets
+- Schema tests: validate all schemas (required fields, optional fields, edge cases, invalid inputs)
+- Service tests: mock the Mongoose model, test each method (happy path, not found, validation error)
+- Route tests: mock the service, test HTTP status codes, request validation, auth
+- Query builder tests: test each filter individually, combined, empty params, edge cases
+- Utility tests: test pure functions with boundary values
 `,
 
   'doc-gen': `## Task: Documentation Generation
@@ -196,7 +231,7 @@ export const BUILDER_TOOLS: ToolDefinition[] = [
   {
     name: 'modify_file',
     description:
-      'Modify an existing file (only src/index.ts and src/routes/mcp.routes.ts are allowed). Provide the full updated content.',
+      'Modify an existing file. Provide the full updated content. Allowed for files in the approved plan, src/index.ts, and src/routes/mcp.routes.ts.',
     input_schema: {
       type: 'object',
       properties: {
@@ -221,6 +256,43 @@ export const BUILDER_TOOLS: ToolDefinition[] = [
         path: {
           type: 'string',
           description: 'Relative path of the file to read',
+        },
+      },
+      required: ['path'],
+    },
+  },
+  {
+    name: 'search_files',
+    description:
+      'Search for a pattern (regex) across project files. Returns matching lines with file paths. Use to find references, usages, imports of a symbol before refactoring.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        pattern: {
+          type: 'string',
+          description:
+            'Regex pattern to search for (e.g., "UserService", "import.*user\\\\.model")',
+        },
+        path: {
+          type: 'string',
+          description:
+            'Directory to search in, relative to project root (default: "src"). Use "tests" to search test files.',
+        },
+      },
+      required: ['pattern'],
+    },
+  },
+  {
+    name: 'list_files',
+    description:
+      'List files in a directory (non-recursive, 1 level). Use to explore project structure before reading specific files.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        path: {
+          type: 'string',
+          description:
+            'Directory to list, relative to project root (e.g., "src/services", "tests/unit")',
         },
       },
       required: ['path'],

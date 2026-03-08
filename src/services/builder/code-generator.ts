@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { writeFile, mkdir, unlink, symlink, rm } from 'node:fs/promises';
+import { writeFile, mkdir, unlink, symlink, rm, readdir } from 'node:fs/promises';
 import { readFile } from 'node:fs/promises';
-import { join, dirname } from 'node:path';
+import { join, dirname, relative } from 'node:path';
 import { tmpdir } from 'node:os';
 import type { BuilderGeneratedFile, BuilderPlan } from '../../schemas/builder.schema.js';
 import { BuilderPlanSchema } from '../../schemas/builder.schema.js';
@@ -322,6 +322,71 @@ async function runToolLoop(config: ToolLoopConfig): Promise<GenerationResult> {
               is_error: true,
             });
           }
+        } else if (toolName === 'search_files') {
+          const pattern = input['pattern'] ?? '';
+          const searchPath = input['path'] ?? 'src';
+
+          const readError = validateReadPath(searchPath);
+          if (readError) {
+            toolResults.push({
+              type: 'tool_result',
+              tool_use_id: block.id,
+              content: `ERROR: ${readError}`,
+              is_error: true,
+            });
+            continue;
+          }
+
+          try {
+            const results = await searchInFiles(projectRoot, searchPath, pattern);
+            toolResults.push({
+              type: 'tool_result',
+              tool_use_id: block.id,
+              content: results.length > 0 ? results : 'No matches found.',
+            });
+          } catch {
+            toolResults.push({
+              type: 'tool_result',
+              tool_use_id: block.id,
+              content: `ERROR: Search failed for pattern: ${pattern}`,
+              is_error: true,
+            });
+          }
+        } else if (toolName === 'list_files') {
+          const dirPath = input['path'] ?? 'src';
+
+          const readError = validateReadPath(dirPath.endsWith('/') ? dirPath : dirPath + '/');
+          if (readError) {
+            toolResults.push({
+              type: 'tool_result',
+              tool_use_id: block.id,
+              content: `ERROR: ${readError}`,
+              is_error: true,
+            });
+            continue;
+          }
+
+          try {
+            const fullPath = join(projectRoot, dirPath);
+            const entries = await readdir(fullPath, { withFileTypes: true });
+            const listing = entries
+              .filter((e) => !['node_modules', 'dist', '.git'].includes(e.name))
+              .map((e) => (e.isDirectory() ? `${e.name}/` : e.name))
+              .sort()
+              .join('\n');
+            toolResults.push({
+              type: 'tool_result',
+              tool_use_id: block.id,
+              content: listing || '(empty directory)',
+            });
+          } catch {
+            toolResults.push({
+              type: 'tool_result',
+              tool_use_id: block.id,
+              content: `ERROR: Directory not found: ${dirPath}`,
+              is_error: true,
+            });
+          }
         } else {
           toolResults.push({
             type: 'tool_result',
@@ -352,6 +417,71 @@ async function runToolLoop(config: ToolLoopConfig): Promise<GenerationResult> {
     tokenUsage: { inputTokens: totalInputTokens, outputTokens: totalOutputTokens },
     validationPassed,
   };
+}
+
+// ---------------------------------------------------------------------------
+// M5: search_files tool — grep-like search across project files
+// ---------------------------------------------------------------------------
+
+const MAX_SEARCH_RESULTS = 50;
+const MAX_SEARCH_LINE_LENGTH = 200;
+
+async function searchInFiles(
+  projectRoot: string,
+  searchPath: string,
+  pattern: string
+): Promise<string> {
+  const regex = new RegExp(pattern, 'i');
+  const results: string[] = [];
+
+  async function scanDir(dirPath: string): Promise<void> {
+    if (results.length >= MAX_SEARCH_RESULTS) return;
+
+    let entries;
+    try {
+      entries = await readdir(dirPath, { withFileTypes: true });
+    } catch {
+      return;
+    }
+
+    for (const entry of entries) {
+      if (results.length >= MAX_SEARCH_RESULTS) break;
+      const name = entry.name;
+      const fullPath = join(dirPath, name);
+
+      if (entry.isDirectory()) {
+        if (['node_modules', 'dist', '.git'].includes(name)) continue;
+        await scanDir(fullPath);
+      } else if (entry.isFile() && name.endsWith('.ts')) {
+        try {
+          const content = await readFile(fullPath, 'utf-8');
+          const lines = content.split('\n');
+          for (let i = 0; i < lines.length && results.length < MAX_SEARCH_RESULTS; i++) {
+            const line = lines[i];
+            if (line && regex.test(line)) {
+              const relPath = relative(projectRoot, fullPath).replace(/\\/g, '/');
+              const trimmedLine =
+                line.length > MAX_SEARCH_LINE_LENGTH
+                  ? line.slice(0, MAX_SEARCH_LINE_LENGTH) + '...'
+                  : line;
+              results.push(`${relPath}:${i + 1}: ${trimmedLine.trim()}`);
+            }
+          }
+        } catch {
+          // Skip unreadable files
+        }
+      }
+    }
+  }
+
+  const startPath = join(projectRoot, searchPath);
+  await scanDir(startPath);
+
+  if (results.length >= MAX_SEARCH_RESULTS) {
+    results.push(`\n... (truncated at ${MAX_SEARCH_RESULTS} results)`);
+  }
+
+  return results.join('\n');
 }
 
 // ---------------------------------------------------------------------------

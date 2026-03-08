@@ -167,15 +167,17 @@ describe('buildPlanPrompt', () => {
 });
 
 describe('BUILDER_TOOLS', () => {
-  it('should have exactly 3 tools', () => {
-    expect(BUILDER_TOOLS).toHaveLength(3);
+  it('should have exactly 5 tools', () => {
+    expect(BUILDER_TOOLS).toHaveLength(5);
   });
 
-  it('should contain write_file, modify_file, and read_file', () => {
+  it('should contain all builder tools', () => {
     const toolNames = BUILDER_TOOLS.map((t) => t.name);
     expect(toolNames).toContain('write_file');
     expect(toolNames).toContain('modify_file');
     expect(toolNames).toContain('read_file');
+    expect(toolNames).toContain('search_files');
+    expect(toolNames).toContain('list_files');
   });
 });
 

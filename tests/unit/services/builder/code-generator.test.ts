@@ -19,6 +19,10 @@ vi.mock('node:fs/promises', () => ({
     if (path === '/project/src/index.ts') {
       return 'export const app = new OpenAPIHono();';
     }
+    // M5: support search_files test
+    if (path === '/project/src/services/user.service.ts') {
+      return 'import { UserModel } from "../models/user.model.js";\nexport class UserService {}\n';
+    }
     throw new Error('File not found');
   }),
   writeFile: vi.fn().mockResolvedValue(undefined),
@@ -27,6 +31,16 @@ vi.mock('node:fs/promises', () => ({
   unlink: vi.fn().mockResolvedValue(undefined),
   symlink: vi.fn().mockResolvedValue(undefined),
   rm: vi.fn().mockResolvedValue(undefined),
+  readdir: vi.fn().mockImplementation(async (dirPath: string) => {
+    // M5: support list_files and search_files tools
+    if (dirPath === '/project/src/services' || dirPath === '/project/src') {
+      return [
+        { name: 'user.service.ts', isFile: () => true, isDirectory: () => false },
+        { name: 'auth.service.ts', isFile: () => true, isDirectory: () => false },
+      ];
+    }
+    throw new Error('Directory not found');
+  }),
 }));
 
 // Mock child_process for in-loop validation (runValidationSteps)
@@ -578,5 +592,130 @@ describe('repairCode', () => {
 
     expect(result.files).toHaveLength(0);
     expect(result.violations).toHaveLength(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// M5: search_files and list_files tool tests
+// ---------------------------------------------------------------------------
+
+describe('generateCode — search_files tool', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('should handle search_files tool and return results', async () => {
+    mockCreate.mockResolvedValueOnce({
+      stop_reason: 'tool_use',
+      content: [
+        {
+          type: 'tool_use',
+          id: 'tool-1',
+          name: 'search_files',
+          input: { pattern: 'UserService', path: 'src/services' },
+        },
+      ],
+      usage: { input_tokens: 100, output_tokens: 50 },
+    });
+
+    mockCreate.mockResolvedValueOnce({
+      stop_reason: 'end_turn',
+      content: [{ type: 'text', text: 'Done.' }],
+      usage: { input_tokens: 80, output_tokens: 20 },
+    });
+
+    const result = await generateCode(
+      'Refactor user service',
+      mockContext,
+      '/project',
+      'sk-test-key'
+    );
+
+    expect(result.violations).toHaveLength(0);
+    // search_files doesn't produce files — it's a read-only tool
+    expect(result.tokenUsage.inputTokens).toBe(180);
+  });
+
+  it('should reject search in forbidden paths', async () => {
+    mockCreate.mockResolvedValueOnce({
+      stop_reason: 'tool_use',
+      content: [
+        {
+          type: 'tool_use',
+          id: 'tool-1',
+          name: 'search_files',
+          input: { pattern: 'secret', path: '.env' },
+        },
+      ],
+      usage: { input_tokens: 100, output_tokens: 50 },
+    });
+
+    mockCreate.mockResolvedValueOnce({
+      stop_reason: 'end_turn',
+      content: [{ type: 'text', text: 'Done.' }],
+      usage: { input_tokens: 80, output_tokens: 20 },
+    });
+
+    const result = await generateCode('Find secrets', mockContext, '/project', 'sk-test-key');
+
+    // Should complete without violations (error is fed back to Claude as tool error)
+    expect(result.violations).toHaveLength(0);
+  });
+});
+
+describe('generateCode — list_files tool', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('should handle list_files tool and return directory listing', async () => {
+    mockCreate.mockResolvedValueOnce({
+      stop_reason: 'tool_use',
+      content: [
+        {
+          type: 'tool_use',
+          id: 'tool-1',
+          name: 'list_files',
+          input: { path: 'src/services' },
+        },
+      ],
+      usage: { input_tokens: 100, output_tokens: 50 },
+    });
+
+    mockCreate.mockResolvedValueOnce({
+      stop_reason: 'end_turn',
+      content: [{ type: 'text', text: 'Done.' }],
+      usage: { input_tokens: 80, output_tokens: 20 },
+    });
+
+    const result = await generateCode('List services', mockContext, '/project', 'sk-test-key');
+
+    expect(result.violations).toHaveLength(0);
+    expect(result.tokenUsage.inputTokens).toBe(180);
+  });
+
+  it('should reject list_files in forbidden paths', async () => {
+    mockCreate.mockResolvedValueOnce({
+      stop_reason: 'tool_use',
+      content: [
+        {
+          type: 'tool_use',
+          id: 'tool-1',
+          name: 'list_files',
+          input: { path: 'node_modules' },
+        },
+      ],
+      usage: { input_tokens: 100, output_tokens: 50 },
+    });
+
+    mockCreate.mockResolvedValueOnce({
+      stop_reason: 'end_turn',
+      content: [{ type: 'text', text: 'Done.' }],
+      usage: { input_tokens: 80, output_tokens: 20 },
+    });
+
+    const result = await generateCode('List node_modules', mockContext, '/project', 'sk-test-key');
+
+    expect(result.violations).toHaveLength(0);
   });
 });
