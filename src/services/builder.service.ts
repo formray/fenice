@@ -9,6 +9,7 @@ import {
   buildDynamicContext,
   formatDynamicContext,
 } from './builder/context-reader.js';
+import { inferContextFiles } from './builder/import-resolver.js';
 import { generateCode, repairCode, generatePlan } from './builder/code-generator.js';
 import { buildFileIndex, formatFileIndex } from './builder/file-indexer.js';
 import { validateGeneratedFiles } from './builder/scope-policy.js';
@@ -26,7 +27,13 @@ import {
   revertCommit,
 } from './builder/git-ops.js';
 import { createPullRequest } from './builder/github-pr.js';
-import { validateProject, formatValidationErrors } from './builder/validator.js';
+import {
+  validateProject,
+  categorizeErrors,
+  pickRepairStrategy,
+  formatStrategyErrors,
+  type RepairStrategy,
+} from './builder/validator.js';
 import { computeDiffs, computePlanCoverage, findImpactedFiles } from './builder/dry-run.js';
 import { BuilderWorldNotifier } from './builder/world-notifier.js';
 import type { WorldWsManager } from '../ws/world-manager.js';
@@ -302,14 +309,28 @@ export class BuilderService {
       const projectRoot = this.getProjectRoot();
       const context = await buildContextBundle(projectRoot);
 
-      // Always use dynamic context — it merges reference CRUD files + plan contextFiles + src/index.ts.
-      // The old static fallback missed src/index.ts and didn't label reference files.
+      // M5: Infer dependency files for non-CRUD tasks (refactor, bugfix, test-gen, schema-migration)
+      const taskType = plan.taskType ?? 'new-resource';
+      const inferredFiles = await inferContextFiles(projectRoot, plan.files, taskType);
+      if (inferredFiles.length > 0) {
+        logger.info(
+          { jobId, taskType, inferredCount: inferredFiles.length, inferredFiles },
+          'Inferred dependency context files'
+        );
+      }
+
+      // Always use dynamic context — it merges reference CRUD files + plan contextFiles + inferred deps + src/index.ts.
       const planContextFiles = plan.contextFiles ?? [];
-      const dynamicBundle = await buildDynamicContext(projectRoot, planContextFiles);
+      const dynamicBundle = await buildDynamicContext(
+        projectRoot,
+        planContextFiles,
+        undefined,
+        inferredFiles
+      );
       const preformattedContext = formatDynamicContext(dynamicBundle);
       logger.info(
         { jobId, contextFileCount: dynamicBundle.contextFiles.length },
-        'Dynamic context built (reference files + plan contextFiles)'
+        'Dynamic context built (reference files + plan contextFiles + inferred deps)'
       );
 
       // Step 2: Generate code via Claude API
@@ -425,11 +446,27 @@ export class BuilderService {
         const generatedPaths = currentFiles.map((f) => f.path);
         let validation = await validateProject(wtPath, generatedPaths);
 
-        // Level 1: Repair (1 attempt — second repair never converges, just burns tokens)
-        const MAX_REPAIR_ATTEMPTS = 1;
+        // M5: Strategy-based multi-retry recovery (up to 3 attempts)
+        // Each attempt targets a specific error category: typecheck → lint → test → all
+        const MAX_REPAIR_ATTEMPTS = 3;
+        const attemptedStrategies = new Set<RepairStrategy>();
+
         for (let attempt = 1; attempt <= MAX_REPAIR_ATTEMPTS && !validation.passed; attempt++) {
-          logger.warn({ jobId, attempt }, 'Validation failed, attempting repair');
-          const errorSummary = formatValidationErrors(validation);
+          const categorized = categorizeErrors(validation);
+          const strategy = pickRepairStrategy(categorized, attemptedStrategies);
+
+          if (!strategy) {
+            logger.warn({ jobId }, 'No more repair strategies available');
+            break;
+          }
+
+          attemptedStrategies.add(strategy);
+          logger.warn(
+            { jobId, attempt, strategy },
+            'Validation failed, attempting targeted repair'
+          );
+
+          const errorSummary = formatStrategyErrors(categorized, strategy);
           const repairResult = await withTimeout(
             repairCode(
               currentFiles,
@@ -440,7 +477,7 @@ export class BuilderService {
               plan.taskType
             ),
             PIPELINE_TIMEOUT_MS,
-            'Repair'
+            `Repair (${strategy})`
           );
 
           if (repairResult.violations.length > 0) {
@@ -471,13 +508,18 @@ export class BuilderService {
             currentFiles.map((f) => f.path)
           );
           if (validation.passed) {
-            logger.info({ jobId, attempt }, 'Repair succeeded');
+            logger.info({ jobId, attempt, strategy }, 'Repair succeeded');
           }
         }
 
         if (!validation.passed) {
-          // Level 2: Draft PR (still useful code, needs manual fixes)
-          logger.warn({ jobId }, 'Repair exhausted, creating draft PR');
+          // M5: Build detailed error report for the failure
+          const failedSteps = validation.errors.filter((e) => !e.passed).map((e) => e.step);
+          const repairAttempts = attemptedStrategies.size;
+          logger.warn(
+            { jobId, failedSteps, repairAttempts, strategies: [...attemptedStrategies] },
+            'Repair exhausted after strategy-based recovery, creating draft PR'
+          );
 
           // Remove the builder worktree and create a draft one
           await removeWorktree(projectRoot, wtPath, branch);
@@ -510,6 +552,8 @@ export class BuilderService {
                 validationErrors: validation.errors
                   .filter((e) => !e.passed)
                   .map((e) => `${e.step}: ${e.output.slice(0, 500)}`),
+                repairAttempts,
+                repairStrategies: [...attemptedStrategies],
                 tokenUsage: { inputTokens: totalTokens.input, outputTokens: totalTokens.output },
               },
             });

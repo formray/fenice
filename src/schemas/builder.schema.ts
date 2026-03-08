@@ -56,6 +56,8 @@ export const BuilderJobResultSchema = z.object({
   commitHash: z.string().optional(),
   validationPassed: z.boolean().optional(),
   validationErrors: z.array(z.string()).optional(),
+  repairAttempts: z.number().int().nonnegative().optional(),
+  repairStrategies: z.array(z.string()).optional(),
   tokenUsage: z
     .object({
       inputTokens: z.number().int().nonnegative(),

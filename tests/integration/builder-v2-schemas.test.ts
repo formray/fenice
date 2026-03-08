@@ -91,6 +91,22 @@ describe('Builder v2 integration', () => {
       expect(result.success).toBe(true);
     });
 
+    it('should accept result with M5 repair metadata', () => {
+      const result = BuilderJobResultSchema.safeParse({
+        files: [{ path: 'src/a.ts', content: 'const x = 1;', action: 'created' }],
+        validationPassed: false,
+        validationErrors: ['typecheck: TS2345'],
+        repairAttempts: 3,
+        repairStrategies: ['typecheck', 'lint', 'all'],
+        tokenUsage: { inputTokens: 5000, outputTokens: 2500 },
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.repairAttempts).toBe(3);
+        expect(result.data.repairStrategies).toEqual(['typecheck', 'lint', 'all']);
+      }
+    });
+
     it('should accept minimal result (backward compat)', () => {
       const result = BuilderJobResultSchema.safeParse({
         files: [{ path: 'src/a.ts', content: 'const x = 1;', action: 'created' }],

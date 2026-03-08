@@ -213,14 +213,18 @@ const DEFAULT_CONTEXT_FILES = [
 const DEFAULT_MAX_CONTEXT_CHARS = 80_000; // ~20000 tokens — golden CRUD needs space
 
 /**
- * Reads requested contextFiles from disk; falls back to DEFAULT_CONTEXT_FILES if empty.
+ * Reads requested contextFiles from disk plus any inferred dependency files.
  * ALWAYS includes the reference CRUD files (user.*) so Claude can match project patterns.
  * Respects a token budget (maxChars). Truncates files that exceed remaining budget.
+ *
+ * @param inferredFiles — additional files discovered via import resolution (M5).
+ *   These are appended after plan contextFiles but before budget truncation.
  */
 export async function buildDynamicContext(
   projectRoot: string,
   contextFiles: string[],
-  maxChars?: number
+  maxChars?: number,
+  inferredFiles?: string[]
 ): Promise<DynamicContextBundle> {
   const budget = maxChars ?? DEFAULT_MAX_CONTEXT_CHARS;
 
@@ -243,6 +247,16 @@ export async function buildDynamicContext(
     if (!seen.has(f)) {
       seen.add(f);
       filesToRead.push(f);
+    }
+  }
+
+  // M5: append inferred dependency files (from import resolution)
+  if (inferredFiles) {
+    for (const f of inferredFiles) {
+      if (!seen.has(f)) {
+        seen.add(f);
+        filesToRead.push(f);
+      }
     }
   }
 

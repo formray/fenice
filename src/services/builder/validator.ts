@@ -90,3 +90,91 @@ export function formatValidationErrors(result: ValidationResult): string {
 
   return parts.join('\n');
 }
+
+// ---------------------------------------------------------------------------
+// M5: Strategy-based error categorization for multi-retry recovery
+// ---------------------------------------------------------------------------
+
+export type RepairStrategy = 'typecheck' | 'lint' | 'test' | 'all';
+
+export interface CategorizedErrors {
+  typeErrors: string;
+  lintErrors: string;
+  testErrors: string;
+}
+
+/**
+ * Categorizes validation errors by step type for targeted repair.
+ * Each category contains only the errors from that step.
+ */
+export function categorizeErrors(result: ValidationResult): CategorizedErrors {
+  const failed = result.errors.filter((s) => !s.passed);
+  return {
+    typeErrors: formatStepErrors(failed, 'typecheck'),
+    lintErrors: formatStepErrors(failed, 'lint'),
+    testErrors: formatStepErrors(failed, 'test'),
+  };
+}
+
+function formatStepErrors(
+  steps: ValidationStepResult[],
+  step: 'typecheck' | 'lint' | 'test'
+): string {
+  const match = steps.find((s) => s.step === step);
+  if (!match) return '';
+  return `### ${step}\n\`\`\`\n${match.output}\n\`\`\``;
+}
+
+/**
+ * Determines the next repair strategy based on what failed.
+ * Priority: typecheck → lint → test → all.
+ * Returns null if the given strategy has already been tried and there's nothing left.
+ */
+export function pickRepairStrategy(
+  categorized: CategorizedErrors,
+  attemptedStrategies: Set<RepairStrategy>
+): RepairStrategy | null {
+  const strategies: RepairStrategy[] = ['typecheck', 'lint', 'test'];
+
+  for (const strategy of strategies) {
+    if (attemptedStrategies.has(strategy)) continue;
+    const hasErrors =
+      (strategy === 'typecheck' && categorized.typeErrors.length > 0) ||
+      (strategy === 'lint' && categorized.lintErrors.length > 0) ||
+      (strategy === 'test' && categorized.testErrors.length > 0);
+    if (hasErrors) return strategy;
+  }
+
+  // If we haven't tried 'all' yet and there are still errors, try fixing everything
+  if (!attemptedStrategies.has('all')) return 'all';
+  return null;
+}
+
+/**
+ * Formats errors for a specific repair strategy.
+ * For targeted strategies, only includes errors from that category.
+ * For 'all', includes everything.
+ */
+export function formatStrategyErrors(
+  categorized: CategorizedErrors,
+  strategy: RepairStrategy
+): string {
+  switch (strategy) {
+    case 'typecheck':
+      return `Fix ONLY the TypeScript type errors below. Do not change anything else.\n\n${categorized.typeErrors}`;
+    case 'lint':
+      return `Fix ONLY the ESLint errors below. Do not change anything else.\n\n${categorized.lintErrors}`;
+    case 'test':
+      return `Fix ONLY the test failures below. Do not change anything else.\n\n${categorized.testErrors}`;
+    case 'all':
+      return formatAllErrors(categorized);
+  }
+}
+
+function formatAllErrors(categorized: CategorizedErrors): string {
+  const parts: string[] = ['Fix ALL the following errors:\n'];
+  if (categorized.typeErrors) parts.push(categorized.typeErrors);
+  if (categorized.lintErrors) parts.push(categorized.lintErrors);
+  if (categorized.testErrors) parts.push(categorized.testErrors);
+  return parts.join('\n\n');
+}

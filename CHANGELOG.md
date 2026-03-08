@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **M5 Import Resolver**: dependency-aware context selection — follows import chains to auto-include relevant files for refactor, bugfix, test-gen, and schema-migration tasks
+- **M5 Strategy-based repair**: multi-retry recovery with targeted strategies (typecheck -> lint -> test -> all), up to 3 repair attempts instead of 1
+- **M5 Repair metadata**: `repairAttempts` and `repairStrategies` fields in job result for observability on draft PRs
+- **M5 tests**: 31 new tests for import-resolver and strategy-based validator (744 total, up from 713)
+
+### Changed
+
+- Builder context reader now accepts `inferredFiles` parameter for dependency-resolved context
+- Builder service uses `categorizeErrors` + `pickRepairStrategy` instead of generic `formatValidationErrors` for repair loop
+
+---
+
 - **M4 Atmosphere**: post-processing pipeline (bloom, SSAO, depth of field, vignette, chromatic aberration, noise), cosmic skybox (star field, nebulae, dust particles), animated key light, ground fog, haze layers, pulse wave effect
 - **M4 Galaxy Settings panel**: real-time sliders for all atmosphere parameters (layout, stars, planets, routes, bloom, post-processing, atmosphere, camera)
 - **Cinematic camera system**: 5 keyframe-based presets (Grand Orbit, Flythrough, Top-Down Sweep, Dramatic Rise, Nebula Tour) with smooth-step easing, play/pause/stop/speed controls

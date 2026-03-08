@@ -137,6 +137,7 @@ src/
       git-ops.ts          # Branch/commit/push via simple-git
       github-pr.ts        # PR creation via Octokit
       validator.ts        # Runs typecheck/lint/test via child_process
+      import-resolver.ts  # M5: dependency-aware context (import chain resolution)
       world-notifier.ts   # Emits builder progress + synthetic deltas via WebSocket
   routes/
     health.routes.ts    # GET /health, /health/detailed
@@ -216,6 +217,8 @@ POST /api/v1/builder/generate  (JWT + admin + rate limit 5/hour)
 - **Safety:** Scope policy (ALLOWED_WRITE_PREFIXES, FORBIDDEN_PATHS, dangerous pattern scanning), PR-only (never merges)
 - **Kill switch:** `BUILDER_ENABLED=false` returns 503
 - **Timeouts:** 10-minute guard on both planning and generation phases
+- **M5 Smart context:** Import resolver follows dependency chains (depth 2) for refactor/bugfix/test-gen tasks
+- **M5 Multi-retry:** Strategy-based repair (typecheck -> lint -> test -> all), up to 3 attempts
 - **World integration:** `builder.progress` delta events + synthetic `service.upserted`/`endpoint.upserted` deltas
 - **Deps:** `@anthropic-ai/sdk`, `simple-git`, `@octokit/rest`
 
@@ -225,7 +228,7 @@ POST /api/v1/builder/generate  (JWT + admin + rate limit 5/hour)
 - **Property testing:** fast-check for schema validation properties
 - **Coverage:** v8 provider, thresholds at 60/40/50/60 (stmts/branches/funcs/lines). DB-dependent files (services, models, production adapters) excluded — need MongoDB integration tests.
 - **Test structure:** `tests/unit/`, `tests/integration/`, `tests/properties/`
-- **Current status:** 560 server tests across 61 test files + 159 client tests across 12 test files, all passing
+- **Current status:** 585 server tests across 66 test files + 159 client tests across 12 test files, all passing
 - **TDD preferred:** Write tests alongside or before implementation
 
 ## Common Gotchas
