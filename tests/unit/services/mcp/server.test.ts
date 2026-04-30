@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { McpServer } from '../../../../src/services/mcp/server.js';
+import { SessionManager } from '../../../../src/services/mcp/session-manager.js';
 import { LogRingBuffer } from '../../../../src/services/mcp/log-buffer.js';
-import type { McpToolContext } from '../../../../src/services/mcp/types.js';
+import type { McpToolContext, CallerIdentity } from '../../../../src/services/mcp/types.js';
 
 const SAMPLE_OPENAPI = {
   openapi: '3.1.0',
@@ -30,7 +31,10 @@ const SAMPLE_OPENAPI = {
   },
 };
 
-function buildContext(overrides: Partial<McpToolContext> = {}): McpToolContext {
+function buildContext(
+  sessionManager: SessionManager,
+  overrides: Partial<McpToolContext> = {}
+): McpToolContext {
   return {
     getOpenApiDocument: () => SAMPLE_OPENAPI,
     getHealthSummary: async () => ({
@@ -39,13 +43,18 @@ function buildContext(overrides: Partial<McpToolContext> = {}): McpToolContext {
       uptime: 12.5,
       mongo: 'ok',
     }),
-    listAgentSessions: () => [],
+    listAgentSessions: () => sessionManager.list(),
     logBuffer: new LogRingBuffer(50),
     ...overrides,
   };
 }
 
-async function initialize(server: McpServer): Promise<string> {
+const TEST_CALLER: CallerIdentity = { userId: 'u1', userRole: 'agent' };
+
+async function initialize(
+  server: McpServer,
+  caller: CallerIdentity = TEST_CALLER
+): Promise<string> {
   const res = await server.dispatch(
     {
       jsonrpc: '2.0',
@@ -57,19 +66,30 @@ async function initialize(server: McpServer): Promise<string> {
         agentRole: 'monitor',
       },
     },
-    null
+    caller
   );
   if (!('result' in res)) throw new Error('initialize failed');
   return (res.result as { sessionId: string }).sessionId;
 }
 
+function buildServer(): { server: McpServer; sessionManager: SessionManager; ctx: McpToolContext } {
+  const sessionManager = new SessionManager(() => null, {
+    ttlMs: 60_000,
+    throttlePerSec: 100,
+    cleanupIntervalMs: 60_000,
+  });
+  const ctx = buildContext(sessionManager);
+  const server = new McpServer(ctx, sessionManager);
+  return { server, sessionManager, ctx };
+}
+
 describe('McpServer', () => {
   let server: McpServer;
+  let sessionManager: SessionManager;
   let ctx: McpToolContext;
 
   beforeEach(() => {
-    ctx = buildContext();
-    server = new McpServer(ctx);
+    ({ server, sessionManager, ctx } = buildServer());
   });
 
   describe('protocol mechanics', () => {
@@ -83,10 +103,11 @@ describe('McpServer', () => {
 
     it('returns method-not-found for unknown methods after initialize', async () => {
       const sessionId = await initialize(server);
-      const res = await server.dispatch(
-        { jsonrpc: '2.0', id: 2, method: 'totally/made_up' },
-        { sessionId, userId: 'u1', userRole: 'agent' }
-      );
+      const res = await server.dispatch({ jsonrpc: '2.0', id: 2, method: 'totally/made_up' }, {
+        sessionId,
+        userId: 'u1',
+        userRole: 'agent',
+      } satisfies CallerIdentity);
       expect(res).toMatchObject({ error: { code: -32601 } });
     });
 
@@ -104,10 +125,11 @@ describe('McpServer', () => {
       const sessionId = await initialize(server);
       expect(sessionId).toMatch(/^[0-9a-f-]{36}$/);
 
-      const res = await server.dispatch(
-        { jsonrpc: '2.0', id: 2, method: 'tools/list' },
-        { sessionId, userId: 'u1', userRole: 'agent' }
-      );
+      const res = await server.dispatch({ jsonrpc: '2.0', id: 2, method: 'tools/list' }, {
+        sessionId,
+        userId: 'u1',
+        userRole: 'agent',
+      } satisfies CallerIdentity);
       expect('result' in res).toBe(true);
     });
   });
@@ -115,10 +137,11 @@ describe('McpServer', () => {
   describe('tools/list', () => {
     it('returns 7 tools (5 read-only + 2 stubbed mutators)', async () => {
       const sessionId = await initialize(server);
-      const res = await server.dispatch(
-        { jsonrpc: '2.0', id: 2, method: 'tools/list' },
-        { sessionId, userId: 'u1', userRole: 'agent' }
-      );
+      const res = await server.dispatch({ jsonrpc: '2.0', id: 2, method: 'tools/list' }, {
+        sessionId,
+        userId: 'u1',
+        userRole: 'agent',
+      } satisfies CallerIdentity);
       if (!('result' in res)) throw new Error('expected result');
       const tools = (res.result as { tools: { name: string }[] }).tools;
       expect(tools).toHaveLength(7);
@@ -144,7 +167,7 @@ describe('McpServer', () => {
           method: 'tools/call',
           params: { name: 'list_endpoints', arguments: {} },
         },
-        { sessionId, userId: 'u1', userRole: 'agent' }
+        { sessionId, userId: 'u1', userRole: 'agent' } satisfies CallerIdentity
       );
       if (!('result' in res)) throw new Error('expected result');
       const result = res.result as { content: { data: { count: number } }[] };
@@ -163,7 +186,7 @@ describe('McpServer', () => {
           method: 'tools/call',
           params: { name: 'list_endpoints', arguments: { service: 'Users' } },
         },
-        { sessionId, userId: 'u1', userRole: 'agent' }
+        { sessionId, userId: 'u1', userRole: 'agent' } satisfies CallerIdentity
       );
       if (!('result' in res)) throw new Error('expected result');
       const result = res.result as { content: { data: { count: number } }[] };
@@ -182,7 +205,7 @@ describe('McpServer', () => {
           method: 'tools/call',
           params: { name: 'list_endpoints', arguments: { method: 'POST' } },
         },
-        { sessionId, userId: 'u1', userRole: 'agent' }
+        { sessionId, userId: 'u1', userRole: 'agent' } satisfies CallerIdentity
       );
       if (!('result' in res)) throw new Error('expected result');
       const result = res.result as { content: { data: { count: number } }[] };
@@ -206,7 +229,7 @@ describe('McpServer', () => {
             arguments: { path: '/api/v1/users/{id}', method: 'GET' },
           },
         },
-        { sessionId, userId: 'u1', userRole: 'agent' }
+        { sessionId, userId: 'u1', userRole: 'agent' } satisfies CallerIdentity
       );
       if (!('result' in res)) throw new Error('expected result');
       const result = res.result as { content: { data: { operation: { summary: string } } }[] };
@@ -224,7 +247,7 @@ describe('McpServer', () => {
           method: 'tools/call',
           params: { name: 'get_schema', arguments: { path: '/does/not/exist' } },
         },
-        { sessionId, userId: 'u1', userRole: 'agent' }
+        { sessionId, userId: 'u1', userRole: 'agent' } satisfies CallerIdentity
       );
       if (!('result' in res)) throw new Error('expected result');
       expect((res.result as { isError: boolean }).isError).toBe(true);
@@ -241,7 +264,7 @@ describe('McpServer', () => {
           method: 'tools/call',
           params: { name: 'check_health', arguments: {} },
         },
-        { sessionId, userId: 'u1', userRole: 'agent' }
+        { sessionId, userId: 'u1', userRole: 'agent' } satisfies CallerIdentity
       );
       if (!('result' in res)) throw new Error('expected result');
       const result = res.result as { content: { data: { status: string } }[] };
@@ -251,7 +274,12 @@ describe('McpServer', () => {
     });
 
     it('marks isError when status is down', async () => {
-      const downCtx = buildContext({
+      const downSessionManager = new SessionManager(() => null, {
+        ttlMs: 60_000,
+        throttlePerSec: 100,
+        cleanupIntervalMs: 60_000,
+      });
+      const downCtx = buildContext(downSessionManager, {
         getHealthSummary: async () => ({
           status: 'down',
           timestamp: 'now',
@@ -259,7 +287,7 @@ describe('McpServer', () => {
           mongo: 'down',
         }),
       });
-      const downServer = new McpServer(downCtx);
+      const downServer = new McpServer(downCtx, downSessionManager);
       const sessionId = await initialize(downServer);
       const res = await downServer.dispatch(
         {
@@ -268,7 +296,7 @@ describe('McpServer', () => {
           method: 'tools/call',
           params: { name: 'check_health', arguments: {} },
         },
-        { sessionId, userId: 'u1', userRole: 'agent' }
+        { sessionId, userId: 'u1', userRole: 'agent' } satisfies CallerIdentity
       );
       if (!('result' in res)) throw new Error('expected result');
       expect((res.result as { isError: boolean }).isError).toBe(true);
@@ -287,7 +315,7 @@ describe('McpServer', () => {
           method: 'tools/call',
           params: { name: 'query_logs', arguments: { level: 'error' } },
         },
-        { sessionId, userId: 'u1', userRole: 'agent' }
+        { sessionId, userId: 'u1', userRole: 'agent' } satisfies CallerIdentity
       );
       if (!('result' in res)) throw new Error('expected result');
       const result = res.result as { content: { data: { count: number } }[] };
@@ -299,7 +327,7 @@ describe('McpServer', () => {
   });
 
   describe('list_agents tool', () => {
-    it('returns empty list when no sessions', async () => {
+    it('returns the calling agent when only one session is registered', async () => {
       const sessionId = await initialize(server);
       const res = await server.dispatch(
         {
@@ -308,14 +336,15 @@ describe('McpServer', () => {
           method: 'tools/call',
           params: { name: 'list_agents', arguments: {} },
         },
-        { sessionId, userId: 'u1', userRole: 'agent' }
+        { sessionId, userId: 'u1', userRole: 'agent' } satisfies CallerIdentity
       );
       if (!('result' in res)) throw new Error('expected result');
       const result = res.result as { content: { data: { count: number } }[] };
       const first = result.content[0];
       if (!first) throw new Error('expected at least one content item');
       const data = first.data;
-      expect(data.count).toBe(0);
+      expect(data.count).toBe(1);
+      expect(sessionManager.size()).toBe(1);
     });
   });
 
@@ -329,7 +358,7 @@ describe('McpServer', () => {
           method: 'tools/call',
           params: { name: 'create_endpoint', arguments: { prompt: 'create a foo endpoint' } },
         },
-        { sessionId, userId: 'u1', userRole: 'agent' }
+        { sessionId, userId: 'u1', userRole: 'agent' } satisfies CallerIdentity
       );
       expect(res).toMatchObject({ error: { code: -32002 } });
     });
@@ -343,7 +372,7 @@ describe('McpServer', () => {
           method: 'tools/call',
           params: { name: 'create_endpoint', arguments: { prompt: 'create a foo endpoint' } },
         },
-        { sessionId, userId: 'u1', userRole: 'admin' }
+        { sessionId, userId: 'u1', userRole: 'admin' } satisfies CallerIdentity
       );
       if (!('result' in res)) throw new Error('expected result');
       expect((res.result as { isError: boolean }).isError).toBe(true);
@@ -353,10 +382,11 @@ describe('McpServer', () => {
   describe('resources', () => {
     it('lists the OpenAPI resource', async () => {
       const sessionId = await initialize(server);
-      const res = await server.dispatch(
-        { jsonrpc: '2.0', id: 14, method: 'resources/list' },
-        { sessionId, userId: 'u1', userRole: 'agent' }
-      );
+      const res = await server.dispatch({ jsonrpc: '2.0', id: 14, method: 'resources/list' }, {
+        sessionId,
+        userId: 'u1',
+        userRole: 'agent',
+      } satisfies CallerIdentity);
       if (!('result' in res)) throw new Error('expected result');
       const resources = (res.result as { resources: { uri: string }[] }).resources;
       expect(resources.map((r) => r.uri)).toContain('fenice://docs/openapi');
@@ -371,7 +401,7 @@ describe('McpServer', () => {
           method: 'resources/read',
           params: { uri: 'fenice://docs/openapi' },
         },
-        { sessionId, userId: 'u1', userRole: 'agent' }
+        { sessionId, userId: 'u1', userRole: 'agent' } satisfies CallerIdentity
       );
       if (!('result' in res)) throw new Error('expected result');
       const contents = (res.result as { contents: { text: string }[] }).contents;
@@ -390,7 +420,7 @@ describe('McpServer', () => {
           method: 'resources/read',
           params: { uri: 'fenice://nope' },
         },
-        { sessionId, userId: 'u1', userRole: 'agent' }
+        { sessionId, userId: 'u1', userRole: 'agent' } satisfies CallerIdentity
       );
       expect(res).toMatchObject({ error: { code: -32602 } });
     });

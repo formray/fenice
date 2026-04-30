@@ -2,10 +2,12 @@ import { Hono } from 'hono';
 import { authMiddleware } from '../middleware/auth.js';
 import { requireRole } from '../middleware/rbac.js';
 import { McpServer } from '../services/mcp/server.js';
+import { SessionManager } from '../services/mcp/session-manager.js';
 import { logBuffer } from '../services/mcp/log-buffer.js';
 import { computeHealthSummary } from '../utils/health.js';
-import type { McpToolContext, AgentIdentity, AgentSessionView } from '../services/mcp/types.js';
+import type { McpToolContext, CallerIdentity } from '../services/mcp/types.js';
 import type { JsonRpcRequest } from '../schemas/mcp.schema.js';
+import type { WorldWsManager } from '../ws/world-manager.js';
 
 type AuthEnv = {
   Variables: {
@@ -19,44 +21,63 @@ const mcpRouter = new Hono<AuthEnv>();
 
 /**
  * Lazy-init the MCP server with a context bound to the live Hono app.
- * `setOpenApiProvider()` must be called once at app boot from index.ts so
- * `getOpenApiDocument()` returns the right spec without a circular import.
+ * `setMcpProviders()` must be called once at app boot from index.ts so
+ * `getOpenApiDocument()` returns the right spec and the SessionManager
+ * has a valid WorldWsManager reference (without a circular import).
  */
 let openApiProvider: () => unknown = () => ({ openapi: '3.1.0', info: {}, paths: {} });
-let agentSessionsProvider: () => AgentSessionView[] = () => [];
+let worldWsProvider: () => WorldWsManager | null = () => null;
 
 export function setMcpProviders(providers: {
   getOpenApiDocument: () => unknown;
-  listAgentSessions?: () => AgentSessionView[];
+  getWorldWsManager?: () => WorldWsManager | null;
 }): void {
   openApiProvider = providers.getOpenApiDocument;
-  if (providers.listAgentSessions) {
-    agentSessionsProvider = providers.listAgentSessions;
+  if (providers.getWorldWsManager) {
+    worldWsProvider = providers.getWorldWsManager;
   }
 }
 
+let sessionManagerInstance: SessionManager | null = null;
 let serverInstance: McpServer | null = null;
+
+function getSessionManager(): SessionManager {
+  if (!sessionManagerInstance) {
+    sessionManagerInstance = new SessionManager(() => worldWsProvider());
+    sessionManagerInstance.start();
+  }
+  return sessionManagerInstance;
+}
+
 function getServer(): McpServer {
   if (!serverInstance) {
+    const sessionManager = getSessionManager();
     const ctx: McpToolContext = {
       getOpenApiDocument: () => openApiProvider(),
       getHealthSummary: () => computeHealthSummary(),
-      listAgentSessions: () => agentSessionsProvider(),
+      listAgentSessions: () => sessionManager.list(),
       logBuffer,
     };
-    serverInstance = new McpServer(ctx);
+    serverInstance = new McpServer(ctx, sessionManager);
   }
   return serverInstance;
 }
 
-/** Test-only — drop the singleton so each test starts fresh. */
+/** Test-only — drop singletons so each test starts fresh. */
 export function resetMcpServer(): void {
+  sessionManagerInstance?.reset();
+  sessionManagerInstance = null;
   serverInstance = null;
 }
 
 /** Test-only — get the active server (for direct dispatch in tests). */
 export function getMcpServerForTest(): McpServer {
   return getServer();
+}
+
+/** Test-only — get the active session manager. */
+export function getSessionManagerForTest(): SessionManager {
+  return getSessionManager();
 }
 
 // ─── GET /mcp — legacy capability discovery (deprecated, removed in v0.5) ───
@@ -90,6 +111,16 @@ mcpRouter.get('/mcp', async (c) => {
   });
 });
 
+// ─── GET /agents — admin-only list of active MCP sessions ──────────────────
+
+mcpRouter.get('/agents', authMiddleware, requireRole('admin'), (c) => {
+  const sm = getSessionManager();
+  return c.json({
+    count: sm.size(),
+    agents: sm.list(),
+  });
+});
+
 // ─── POST /mcp/rpc — operational JSON-RPC dispatcher ───────────────────────
 
 mcpRouter.post('/mcp/rpc', authMiddleware, requireRole('agent'), async (c) => {
@@ -110,23 +141,20 @@ mcpRouter.post('/mcp/rpc', authMiddleware, requireRole('agent'), async (c) => {
     );
   }
 
-  // Identity bound to the JWT-verified context. Sessions begin on `initialize`
-  // and are looked up via the `Mcp-Session-Id` header on subsequent calls.
-  const sessionId = c.req.header('mcp-session-id') ?? '';
+  // Caller bound to the JWT-verified context. The session id (if present)
+  // comes from the Mcp-Session-Id header set by clients after `initialize`.
+  const sessionId = c.req.header('mcp-session-id');
   const userId = c.get('userId');
   const userRole = c.get('role');
 
-  const isInitialize =
-    typeof body === 'object' && body !== null && (body as JsonRpcRequest).method === 'initialize';
+  const caller: CallerIdentity = sessionId ? { userId, userRole, sessionId } : { userId, userRole };
 
-  const identity: AgentIdentity | null = isInitialize
-    ? null
-    : sessionId
-      ? { sessionId, userId, userRole }
-      : null;
+  // Surface the method here only to keep the import-aware lint quiet about
+  // unused JsonRpcRequest type — the dispatcher does its own validation.
+  void (body as JsonRpcRequest | undefined)?.method;
 
   const server = getServer();
-  const response = await server.dispatch(body, identity);
+  const response = await server.dispatch(body, caller);
 
   // JSON-RPC error responses are still HTTP 200 per spec; errors are signalled
   // by the `error` field, not the status code.

@@ -82,7 +82,44 @@ export const BuilderProgressEventSchema = z.object({
   }),
 });
 
-// ─── Discriminated union of all 9 event types ────────────────────────────────
+// ─── Agent presence events (M7) ─────────────────────────────────────────────
+
+export const AgentRoleEnum = z.enum(['generator', 'reviewer', 'tester', 'monitor', 'generic']);
+export type AgentRole = z.infer<typeof AgentRoleEnum>;
+
+export const AgentConnectedEventSchema = z.object({
+  type: z.literal('agent.connected'),
+  entityId: z.string().min(1), // agentId
+  payload: z.object({
+    agentId: z.string().min(1),
+    name: z.string().min(1),
+    role: AgentRoleEnum,
+  }),
+});
+
+export const AgentDisconnectedEventSchema = z.object({
+  type: z.literal('agent.disconnected'),
+  entityId: z.string().min(1),
+});
+
+export const AgentActivityEventSchema = z.object({
+  type: z.literal('agent.activity'),
+  entityId: z.string().min(1), // agentId
+  payload: z.object({
+    agentId: z.string().min(1),
+    tool: z.string().min(1),
+    status: z.enum(['started', 'completed', 'failed']),
+    target: z
+      .object({
+        type: z.enum(['service', 'endpoint']),
+        id: z.string().min(1),
+      })
+      .optional(),
+    durationMs: z.number().nonnegative().optional(),
+  }),
+});
+
+// ─── Discriminated union of all 12 event types ──────────────────────────────
 
 export const WorldDeltaEventSchema = z.discriminatedUnion('type', [
   ServiceUpsertedEventSchema,
@@ -94,6 +131,9 @@ export const WorldDeltaEventSchema = z.discriminatedUnion('type', [
   EndpointMetricsUpdatedEventSchema,
   EndpointHealthUpdatedEventSchema,
   BuilderProgressEventSchema,
+  AgentConnectedEventSchema,
+  AgentDisconnectedEventSchema,
+  AgentActivityEventSchema,
 ]);
 
 export type WorldDeltaEvent = z.infer<typeof WorldDeltaEventSchema>;

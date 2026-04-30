@@ -14,7 +14,8 @@ import type {
 } from '../../schemas/mcp.schema.js';
 import type { Role } from '../../middleware/rbac.js';
 import { ROLE_HIERARCHY } from '../../middleware/rbac.js';
-import type { McpToolContext, ToolHandler, AgentIdentity } from './types.js';
+import type { McpToolContext, ToolHandler, CallerIdentity } from './types.js';
+import type { SessionManager } from './session-manager.js';
 
 import { listEndpointsTool } from './tools/list-endpoints.js';
 import { getSchemaTool } from './tools/get-schema.js';
@@ -35,9 +36,11 @@ import { createEndpointTool, modifyEndpointTool } from './tools/builder-stubs.js
  */
 export class McpServer {
   private readonly tools = new Map<string, ToolHandler>();
-  private readonly initializedSessions = new Set<string>();
 
-  constructor(private readonly ctx: McpToolContext) {
+  constructor(
+    private readonly ctx: McpToolContext,
+    private readonly sessionManager?: SessionManager
+  ) {
     this.registerTool(listEndpointsTool);
     this.registerTool(getSchemaTool);
     this.registerTool(checkHealthTool);
@@ -59,10 +62,11 @@ export class McpServer {
    * Dispatch a JSON-RPC request against this server.
    *
    * @param raw  The raw JSON value (already parsed from the body).
-   * @param identity  The authenticated caller's identity (from JWT + session header).
-   *                  `null` is acceptable for `initialize` requests where no session exists yet.
+   * @param caller  The authenticated caller — userId/userRole always present
+   *                (from JWT). `sessionId` is set on non-initialize requests.
+   *                Pass `null` only for unauthenticated `ping` requests.
    */
-  async dispatch(raw: unknown, identity: AgentIdentity | null): Promise<JsonRpcResponse> {
+  async dispatch(raw: unknown, caller: CallerIdentity | null): Promise<JsonRpcResponse> {
     const parsed = JsonRpcRequestSchema.safeParse(raw);
     if (!parsed.success) {
       return this.errorResponse(null, JSON_RPC_ERROR.INVALID_REQUEST, 'Invalid JSON-RPC request');
@@ -74,17 +78,28 @@ export class McpServer {
     try {
       switch (request.method) {
         case 'initialize':
-          return await this.handleInitialize(request, id);
+          if (!caller) {
+            return this.errorResponse(
+              id,
+              JSON_RPC_ERROR.UNAUTHORIZED,
+              'initialize requires authentication'
+            );
+          }
+          return await this.handleInitialize(request, id, caller);
         case 'ping':
           return { jsonrpc: '2.0', id, result: {} };
-        case 'tools/list':
-          this.requireInitialized(identity);
+        case 'tools/list': {
+          const initCaller = this.requireInitialized(caller);
+          this.touchSession(initCaller);
           return { jsonrpc: '2.0', id, result: { tools: this.listToolDefinitions() } };
-        case 'tools/call':
-          this.requireInitialized(identity);
-          return await this.handleToolCall(request, id, identity);
-        case 'resources/list':
-          this.requireInitialized(identity);
+        }
+        case 'tools/call': {
+          const initCaller = this.requireInitialized(caller);
+          return await this.handleToolCall(request, id, initCaller);
+        }
+        case 'resources/list': {
+          const initCaller = this.requireInitialized(caller);
+          this.touchSession(initCaller);
           return {
             jsonrpc: '2.0',
             id,
@@ -99,9 +114,12 @@ export class McpServer {
               ],
             },
           };
-        case 'resources/read':
-          this.requireInitialized(identity);
+        }
+        case 'resources/read': {
+          const initCaller = this.requireInitialized(caller);
+          this.touchSession(initCaller);
           return await this.handleResourceRead(request, id);
+        }
         default:
           return this.errorResponse(
             id,
@@ -122,7 +140,8 @@ export class McpServer {
 
   private async handleInitialize(
     request: JsonRpcRequest,
-    id: JsonRpcRequest['id']
+    id: JsonRpcRequest['id'],
+    caller: CallerIdentity
   ): Promise<JsonRpcResponse> {
     const params = McpInitializeParamsSchema.safeParse(request.params);
     if (!params.success) {
@@ -135,7 +154,16 @@ export class McpServer {
     }
 
     const sessionId = randomUUID();
-    this.initializedSessions.add(sessionId);
+
+    if (this.sessionManager) {
+      this.sessionManager.register({
+        sessionId,
+        name: params.data.clientInfo.name,
+        version: params.data.clientInfo.version,
+        role: params.data.agentRole,
+        userId: caller.userId,
+      });
+    }
 
     return {
       jsonrpc: '2.0',
@@ -155,7 +183,7 @@ export class McpServer {
   private async handleToolCall(
     request: JsonRpcRequest,
     id: JsonRpcRequest['id'],
-    identity: AgentIdentity | null
+    caller: CallerIdentity
   ): Promise<JsonRpcResponse> {
     const params = McpToolsCallParamsSchema.safeParse(request.params);
     if (!params.success) {
@@ -177,7 +205,7 @@ export class McpServer {
     }
 
     // Per-tool RBAC check
-    const callerLevel = identity ? this.roleLevel(identity.userRole) : 0;
+    const callerLevel = this.roleLevel(caller.userRole);
     const requiredLevel = ROLE_HIERARCHY[handler.definition.minRole];
     if (callerLevel < requiredLevel) {
       return this.errorResponse(
@@ -187,8 +215,35 @@ export class McpServer {
       );
     }
 
-    const result = await handler.handle(params.data.arguments, this.ctx);
-    return { jsonrpc: '2.0', id: id ?? null, result };
+    // Lifecycle: emit started → handler runs → emit completed/failed
+    const sessionId = caller.sessionId;
+    const start = Date.now();
+    if (sessionId && this.sessionManager) {
+      this.sessionManager.startActivity(sessionId, handler.definition.name);
+    }
+
+    try {
+      const result = await handler.handle(params.data.arguments, this.ctx);
+      if (sessionId && this.sessionManager) {
+        this.sessionManager.completeActivity(
+          sessionId,
+          handler.definition.name,
+          Date.now() - start,
+          result.isError
+        );
+      }
+      return { jsonrpc: '2.0', id: id ?? null, result };
+    } catch (err) {
+      if (sessionId && this.sessionManager) {
+        this.sessionManager.completeActivity(
+          sessionId,
+          handler.definition.name,
+          Date.now() - start,
+          true
+        );
+      }
+      throw err;
+    }
   }
 
   private async handleResourceRead(
@@ -242,27 +297,26 @@ export class McpServer {
     };
   }
 
-  private requireInitialized(identity: AgentIdentity | null): void {
-    if (!identity || !this.initializedSessions.has(identity.sessionId)) {
+  private requireInitialized(
+    caller: CallerIdentity | null
+  ): CallerIdentity & { sessionId: string } {
+    const sessionId = caller?.sessionId;
+    if (!caller || !sessionId || !this.sessionManager?.has(sessionId)) {
       throw new McpProtocolError(
         JSON_RPC_ERROR.NOT_INITIALIZED,
         'Session not initialized — call initialize first'
       );
     }
+    return { ...caller, sessionId };
+  }
+
+  /** Refresh lastSeenAt on a known session — for non-tool-call methods. */
+  private touchSession(caller: CallerIdentity & { sessionId: string }): void {
+    this.sessionManager?.heartbeat(caller.sessionId);
   }
 
   private roleLevel(role: string): number {
     return role in ROLE_HIERARCHY ? ROLE_HIERARCHY[role as Role] : 0;
-  }
-
-  /** Test-only: forget all sessions. */
-  resetSessions(): void {
-    this.initializedSessions.clear();
-  }
-
-  /** For session-manager (M7.2) to deregister sessions on disconnect. */
-  forgetSession(sessionId: string): void {
-    this.initializedSessions.delete(sessionId);
   }
 }
 

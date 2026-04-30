@@ -42,8 +42,13 @@ export interface ToolHandler {
   ): Promise<McpToolsCallResult>;
 }
 
-export interface AgentIdentity {
-  sessionId: string;
+/**
+ * The authenticated caller. `sessionId` is populated for non-initialize
+ * requests (extracted from the `Mcp-Session-Id` header). On `initialize`
+ * the server mints a new sessionId and binds it to this caller.
+ */
+export interface CallerIdentity {
   userId: string;
   userRole: string;
+  sessionId?: string;
 }
