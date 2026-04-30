@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — M7 MCP Live (Bridge — operational MCP server + agent presence in cosmos)
+
+#### M7.1 — Operational MCP server (server)
+
+- New endpoint `POST /api/v1/mcp/rpc` — JSON-RPC 2.0 transport (auth: JWT, role >= agent)
+- Five operational read-only tools: `list_endpoints`, `get_schema`, `check_health`, `list_agents`, `query_logs`
+- Two stubbed admin-only mutating tools: `create_endpoint`, `modify_endpoint` (handlers wired to the builder in M7.b)
+- New RBAC role `agent` (level 35, between `client` and `employee`)
+- Schemas: `src/schemas/mcp.schema.ts` (Zod-validated JSON-RPC envelope, MCP method names, tool definitions)
+- Service: `src/services/mcp/server.ts` (dispatcher), `src/services/mcp/log-buffer.ts` (200-record in-memory ring), `src/services/mcp/tools/*.ts` (one file per tool)
+- Legacy `GET /api/v1/mcp` retained as capability advertisement (deprecated, removed in v0.5)
+- Request logger now feeds the log ring buffer for `query_logs`
+
+#### M7.2 — Agent sessions + world delta events (server)
+
+- `WorldDeltaEvent` discriminated union extended (9 → 12 types): `agent.connected`, `agent.disconnected`, `agent.activity`
+- `SessionManager` service: in-memory session tracking with TTL cleanup, per-session activity throttle (10/s default), heartbeat
+- McpServer lifecycle wired to SessionManager (initialize → register, tool call → startActivity/completeActivity, including `durationMs` and `isError`)
+- New endpoint `GET /api/v1/agents` — admin-only list of active MCP sessions
+- `CallerIdentity` replaces `AgentIdentity` (userId/userRole always present from JWT, sessionId optional)
+- Env vars: `MCP_ENABLED`, `MCP_SESSION_TTL_MS`, `MCP_ACTIVITY_THROTTLE_PER_SEC`, `MCP_LOG_BUFFER_SIZE`
+
+#### M7.3 — Agent presence in 3D cosmos (client)
+
+- New types: `AgentEntity`, `ActivityFeedEntry`, `ActiveBeam`, `ROLE_COLORS` (cyan/magenta/amber/violet/white)
+- New Zustand store `agent.store.ts`: connected agents map, rolling activity feed (cap 20, newest-first), beam lifecycle with TTL pruning
+- World store reducer extended to forward `agent.*` deltas to the agent store
+- New R3F components: `AgentEntity.tsx` (octahedron probe, role-colored, busy-pulse animation, deterministic orbital placement), `AgentSwarm.tsx` (render-loop wrapper)
+- New HUD component: `AgentPanel.tsx` (top-right card with connected agents and activity feed)
+- WorldDeltaEvent type union extended in client to mirror backend
+
+#### Tooling and docs
+
+- `scripts/mcp-demo.ts` — runnable TypeScript demo that initializes a session and exercises every read-only tool
+- `docs/MCP_QUICKSTART.md` — connection guide with curl examples, tool catalog, role colors, configuration, and roadmap
+
+#### Tests
+
+- 31 new server tests for M7.1 (6 log-buffer + 17 server unit + 5 mcp-rpc integration + 3 legacy mcp restructured)
+- 12 new server tests for M7.2 (session-manager lifecycle, throttle, heartbeat, view formatting)
+- 9 new client tests for M7.3 (agent store reducers, feed cap, beam lifecycle)
+- Total: 791 server tests across 70 files (was 748/66) + 253 client tests across 21 files (was 244/20)
+
 ## [0.4.0] - 2026-04-30
 
 ### Added

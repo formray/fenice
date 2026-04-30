@@ -56,6 +56,7 @@ Two complementary tracks evolving together. See [design doc](docs/plans/2026-02-
 | M4 | 3D | Atmosphere — Post-processing, skybox, material upgrade, dark cosmic palette, ultra quality mode, cinematic camera, Galaxy Settings panel |
 | M5 | Agent | Builder v2 — Smart context (import resolver), multi-retry recovery (strategy-based), search_files + list_files tools, improved task prompts |
 | M6 | 3D | Cosmos — Service stars on concentric rings, endpoint planets with method-based shapes, curved luminous routes with pulse animation, wormhole auth gate, orbital navigation, cosmos/tron mode switch, dark/light themes, Galaxy Settings panel |
+| M7 | Bridge | MCP Live — Operational JSON-RPC 2.0 server, 5 read-only tools (list_endpoints, get_schema, check_health, list_agents, query_logs), agent role in RBAC, agent sessions with TTL/throttle, agent.connected/disconnected/activity world deltas, 3D agent presence (octahedron probes, role colors), agent HUD panel with rolling activity feed |
 
 ### Active Roadmap
 
@@ -64,9 +65,9 @@ Track A (3D Visual)            Track B (Agent)
 
   M4: Atmosphere ✅               M5: Builder v2 ✅
        |                              |
-  M6: Cosmos ✅ ───────────── M7: MCP Live        ← first bridge (NEXT)
+  M6: Cosmos ✅ ───────────── M7: MCP Live ✅       ← first bridge done
        |             ╲                |
-  M8: Observability ──────── M9: Agent Swarm       ← full integration
+  M8: Observability ──────── M9: Agent Swarm        ← full integration (NEXT)
        |                              |
   M10: Interactive Design      M11: Team Enterprise
 ```
@@ -75,13 +76,13 @@ Track A (3D Visual)            Track B (Agent)
 |-----------|-------|--------|--------------|-------------|
 | **M5** | Agent | Done | M3.1 | **Builder v2** — Smart context (import resolver), multi-retry recovery (3 strategies), search_files/list_files tools, improved task prompts |
 | **M6** | 3D | Done | M4 | **Cosmos** — Service stars on concentric rings, endpoint planets (method-based shapes), curved luminous routes with pulse, wormhole auth gate, orbital navigation, cosmos/tron mode switch, dark/light themes |
-| **M7** | Bridge | — | M5 + M6 | **MCP Live** — Real MCP server with executable tools, agent connection protocol, agent presence in 3D cosmos, activity trails, agent HUD |
+| **M7** | Bridge | Done | M5 + M6 | **MCP Live** — Operational JSON-RPC 2.0 MCP server, agent connection protocol, agent presence in 3D cosmos, activity-aware HUD. Mutating tools (create_endpoint, modify_endpoint) stubbed — wired to builder in M7.b |
 | **M8** | Bridge | — | M6 + M7 | **Observability** — OTel data pipeline to 3D, traffic particles on routes, planet heatmaps (latency/errors), anomaly detection with visual alerts |
 | **M9** | Agent | — | M7 + M8 | **Agent Swarm** — Multi-agent orchestration (Generator, Reviewer, Tester, Monitor), task decomposition, A2A via FENICE hub, swarm visualization |
 | **M10** | 3D | — | M6 + M9 | **Interactive Design** — Drag & drop planet creation, visual schema editor, agent-assisted design, undo/redo timeline, template gallery |
 | **M11** | Agent | — | M9 | **Team Enterprise** — Multi-user presence, agent teams per user, permission model, shared code review in 3D |
 
-**Next up:** M7 (MCP Live) — all dependencies satisfied (M5 + M6 both done). From M7 onward, milestones are sequential.
+**Next up:** M8 (Observability) — depends on M6 + M7 (both done). Sequential from here.
 
 ### Future — Scale & Optimize (Backlog)
 
