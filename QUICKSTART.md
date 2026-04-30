@@ -84,12 +84,15 @@ curl http://localhost:3000/api/v1/users/me \
   -H "Authorization: Bearer <your-access-token>"
 ```
 
-Set the client world token:
-```bash
-echo "VITE_WS_TOKEN=<your-access-token>" > client/.env
-```
+Open `http://localhost:5173` and sign in directly from the cosmos client —
+the login form is the first thing you'll see. You can:
+- **Sign in** with an existing account (email + password), or
+- **Create account** for a new user, or
+- **Paste token** to use a JWT minted via curl (useful for testing).
 
-Then refresh `http://localhost:5173` to connect the 3D world client to `GET /api/v1/world-ws`.
+The client persists your session in `localStorage` (key `fenice.auth`) and
+auto-attaches the token to the world WebSocket and to `/api/v1/builder/*`.
+Sign out from the user menu in the top-left corner of the HUD.
 
 ## Other Commands
 

@@ -1,6 +1,7 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { useBuilderStore } from '../../stores/builder.store';
 import { useViewStore } from '../../stores/view.store';
+import { useAuthStore } from '../../stores/auth.store';
 import {
   submitBuilderPrompt,
   fetchBuilderJob,
@@ -20,9 +21,8 @@ import { BuilderTaskSelector } from './BuilderTaskSelector';
 import { BuilderDraftResult } from './BuilderDraftResult';
 import { BuilderResultPanel } from './BuilderResultPanel';
 
-const WS_TOKEN = import.meta.env.VITE_WS_TOKEN as string | undefined;
-
 export function BuilderPromptBar(): React.JSX.Element {
+  const authToken = useAuthStore((s) => s.accessToken);
   const expanded = useBuilderStore((s) => s.expanded);
   const toggleExpanded = useBuilderStore((s) => s.toggleExpanded);
   const prompt = useBuilderStore((s) => s.prompt);
@@ -74,11 +74,11 @@ export function BuilderPromptBar(): React.JSX.Element {
   const canSubmit = prompt.length >= 10 && prompt.length <= 2000 && !submitting && !isRunning;
 
   const handleSubmit = useCallback(async () => {
-    if (!canSubmit || !WS_TOKEN) return;
+    if (!canSubmit || !authToken) return;
     setSubmitting(true);
     try {
       const { jobId: newJobId } = await submitBuilderPrompt(
-        WS_TOKEN,
+        authToken,
         prompt,
         dryRun,
         taskType,
@@ -100,18 +100,18 @@ export function BuilderPromptBar(): React.JSX.Element {
   );
 
   const handleApprove = useCallback(async () => {
-    if (!jobId || !WS_TOKEN || !plan || !summary) return;
+    if (!jobId || !authToken || !plan || !summary) return;
     try {
-      await approveBuilderJob(WS_TOKEN, jobId, { files: plan, summary });
+      await approveBuilderJob(authToken, jobId, { files: plan, summary });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Approve failed');
     }
   }, [jobId, plan, summary, setError]);
 
   const handleReject = useCallback(async () => {
-    if (!jobId || !WS_TOKEN) return;
+    if (!jobId || !authToken) return;
     try {
-      await rejectBuilderJob(WS_TOKEN, jobId);
+      await rejectBuilderJob(authToken, jobId);
       dismiss();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Reject failed');
@@ -119,9 +119,9 @@ export function BuilderPromptBar(): React.JSX.Element {
   }, [jobId, dismiss, setError]);
 
   const handleRollback = useCallback(async () => {
-    if (!jobId || !WS_TOKEN || !commitHash) return;
+    if (!jobId || !authToken || !commitHash) return;
     try {
-      await rollbackBuilderJob(WS_TOKEN, jobId);
+      await rollbackBuilderJob(authToken, jobId);
       dismiss();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Rollback failed');
@@ -130,11 +130,11 @@ export function BuilderPromptBar(): React.JSX.Element {
 
   // Fetch full job details when status reaches completed or failed
   useEffect(() => {
-    if (!jobId || !WS_TOKEN) return;
+    if (!jobId || !authToken) return;
     if (status !== 'completed' && status !== 'completed_draft' && status !== 'failed') return;
 
     let cancelled = false;
-    void fetchBuilderJob(WS_TOKEN, jobId)
+    void fetchBuilderJob(authToken, jobId)
       .then((job) => {
         if (cancelled) return;
         if ((job.status === 'completed' || job.status === 'completed_draft') && job.result) {
@@ -155,10 +155,10 @@ export function BuilderPromptBar(): React.JSX.Element {
 
   // Fetch plan details when status reaches plan_ready
   useEffect(() => {
-    if (!jobId || !WS_TOKEN || status !== 'plan_ready') return;
+    if (!jobId || !authToken || status !== 'plan_ready') return;
 
     let cancelled = false;
-    void fetchBuilderJob(WS_TOKEN, jobId)
+    void fetchBuilderJob(authToken, jobId)
       .then((job) => {
         if (cancelled || !job.plan) return;
         setPlan(job.plan.files, job.plan.summary);
