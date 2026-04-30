@@ -3,6 +3,7 @@ import { HUD } from './components/HUD';
 import { SidePanel } from './components/SidePanel';
 import { BuilderPromptBar } from './components/builder/BuilderPromptBar';
 import { CosmosSettings } from './components/CosmosSettings';
+import { AgentPanel } from './components/AgentPanel';
 import { useWorldSocket } from './hooks/useWorldSocket';
 
 const WS_TOKEN = import.meta.env.VITE_WS_TOKEN as string | undefined;
@@ -17,6 +18,7 @@ export function App(): React.JSX.Element {
       <SidePanel />
       <BuilderPromptBar />
       <CosmosSettings />
+      <AgentPanel />
     </div>
   );
 }

@@ -3,6 +3,7 @@ import type { WorldService, WorldEndpoint, WorldEdge, WorldModel } from '../type
 import type { WorldDeltaMessage } from '../types/world-ws';
 import type { EndpointMetrics, EndpointHealth } from '../types/world-delta';
 import { useBuilderStore } from './builder.store';
+import { useAgentStore } from './agent.store';
 import type {
   SessionState,
   SemanticState,
@@ -187,6 +188,18 @@ export const useWorldStore = create<WorldState>((set, get) => ({
         }
         case 'builder.progress': {
           useBuilderStore.getState().applyProgress(event.payload);
+          break;
+        }
+        case 'agent.connected': {
+          useAgentStore.getState().applyConnected(event.entityId, event.payload);
+          break;
+        }
+        case 'agent.disconnected': {
+          useAgentStore.getState().applyDisconnected(event.entityId);
+          break;
+        }
+        case 'agent.activity': {
+          useAgentStore.getState().applyActivity(event.entityId, event.payload);
           break;
         }
       }

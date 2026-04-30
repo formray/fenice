@@ -7,6 +7,7 @@ import { EndpointPlanet } from './EndpointPlanet';
 import { OrbitalPath } from './OrbitalPath';
 import { CurvedRoute } from './CurvedRoute';
 import { Wormhole } from './Wormhole';
+import { AgentSwarm } from './AgentSwarm';
 import { METHOD_COLORS, LINK_STATE_COLORS } from '../utils/colors';
 import { seededRandom, COSMOS_LAYOUT } from '../utils/cosmos';
 import { useCosmosSettingsStore } from '../stores/cosmos-settings.store';
@@ -134,6 +135,9 @@ export function Cosmos(): React.JSX.Element | null {
       {serviceRoutes.map((route, i) => (
         <CurvedRoute key={`route-${i}`} from={route.from} to={route.to} color={route.color} />
       ))}
+
+      {/* M7: connected MCP agents as drones in the cosmos */}
+      <AgentSwarm />
     </group>
   );
 }
