@@ -1,302 +1,82 @@
 import { Hono } from 'hono';
+import { authMiddleware } from '../middleware/auth.js';
+import { requireRole } from '../middleware/rbac.js';
+import { McpServer } from '../services/mcp/server.js';
+import { logBuffer } from '../services/mcp/log-buffer.js';
+import { computeHealthSummary } from '../utils/health.js';
+import type { McpToolContext, AgentIdentity, AgentSessionView } from '../services/mcp/types.js';
+import type { JsonRpcRequest } from '../schemas/mcp.schema.js';
 
-const mcpRouter = new Hono();
+type AuthEnv = {
+  Variables: {
+    userId: string;
+    email: string;
+    role: string;
+  };
+};
 
-// MCP Discovery endpoint — describes API capabilities for AI agents
+const mcpRouter = new Hono<AuthEnv>();
+
+/**
+ * Lazy-init the MCP server with a context bound to the live Hono app.
+ * `setOpenApiProvider()` must be called once at app boot from index.ts so
+ * `getOpenApiDocument()` returns the right spec without a circular import.
+ */
+let openApiProvider: () => unknown = () => ({ openapi: '3.1.0', info: {}, paths: {} });
+let agentSessionsProvider: () => AgentSessionView[] = () => [];
+
+export function setMcpProviders(providers: {
+  getOpenApiDocument: () => unknown;
+  listAgentSessions?: () => AgentSessionView[];
+}): void {
+  openApiProvider = providers.getOpenApiDocument;
+  if (providers.listAgentSessions) {
+    agentSessionsProvider = providers.listAgentSessions;
+  }
+}
+
+let serverInstance: McpServer | null = null;
+function getServer(): McpServer {
+  if (!serverInstance) {
+    const ctx: McpToolContext = {
+      getOpenApiDocument: () => openApiProvider(),
+      getHealthSummary: () => computeHealthSummary(),
+      listAgentSessions: () => agentSessionsProvider(),
+      logBuffer,
+    };
+    serverInstance = new McpServer(ctx);
+  }
+  return serverInstance;
+}
+
+/** Test-only — drop the singleton so each test starts fresh. */
+export function resetMcpServer(): void {
+  serverInstance = null;
+}
+
+/** Test-only — get the active server (for direct dispatch in tests). */
+export function getMcpServerForTest(): McpServer {
+  return getServer();
+}
+
+// ─── GET /mcp — legacy capability discovery (deprecated, removed in v0.5) ───
+
 mcpRouter.get('/mcp', async (c) => {
+  const server = getServer();
   return c.json({
     name: 'fenice',
     version: '0.4.0',
-    description: 'AI-native backend API — FENICE',
+    description:
+      'AI-native backend API — FENICE. The static manifest below is deprecated; clients should use POST /mcp/rpc with JSON-RPC 2.0 (initialize, tools/list, tools/call, resources/list).',
+    transport: {
+      jsonrpc: 'POST /api/v1/mcp/rpc',
+      protocolVersion: '2025-03-26',
+    },
     capabilities: {
       tools: true,
       resources: true,
     },
-    tools: [
-      {
-        name: 'auth_signup',
-        description: 'Register a new user account',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            email: { type: 'string', format: 'email' },
-            username: { type: 'string', minLength: 2, maxLength: 50 },
-            fullName: { type: 'string', minLength: 1, maxLength: 100 },
-            password: { type: 'string', minLength: 8, maxLength: 128 },
-          },
-          required: ['email', 'username', 'fullName', 'password'],
-        },
-      },
-      {
-        name: 'auth_login',
-        description: 'Authenticate with email and password',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            email: { type: 'string', format: 'email' },
-            password: { type: 'string' },
-          },
-          required: ['email', 'password'],
-        },
-      },
-      {
-        name: 'auth_refresh',
-        description: 'Refresh an expired access token',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            refreshToken: { type: 'string' },
-          },
-          required: ['refreshToken'],
-        },
-      },
-      {
-        name: 'user_get_me',
-        description: 'Get the currently authenticated user profile',
-        inputSchema: { type: 'object', properties: {} },
-      },
-      {
-        name: 'user_get_by_id',
-        description: 'Get a user by their ID',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            id: { type: 'string' },
-          },
-          required: ['id'],
-        },
-      },
-      {
-        name: 'user_update',
-        description: 'Update user profile fields',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            id: { type: 'string' },
-            fullName: { type: 'string', minLength: 1, maxLength: 100 },
-            pictureUrl: { type: 'string', format: 'uri' },
-          },
-          required: ['id'],
-        },
-      },
-      {
-        name: 'user_delete',
-        description: 'Delete a user (admin only)',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            id: { type: 'string' },
-          },
-          required: ['id'],
-        },
-      },
-      {
-        name: 'user_list',
-        description: 'List users with cursor pagination and optional filters',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            cursor: { type: 'string', description: 'Pagination cursor from previous response' },
-            limit: { type: 'number', minimum: 1, maximum: 100, default: 20 },
-            sort: {
-              type: 'string',
-              enum: ['createdAt', 'email', 'username'],
-              default: 'createdAt',
-            },
-            order: { type: 'string', enum: ['asc', 'desc'], default: 'desc' },
-            search: { type: 'string', description: 'Search across email, username, fullName' },
-            role: {
-              type: 'string',
-              enum: ['superAdmin', 'admin', 'employee', 'client', 'vendor', 'user'],
-            },
-            active: { type: 'boolean' },
-          },
-        },
-      },
-      {
-        name: 'auth_verify_email',
-        description: 'Verify email address using token from verification email',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            token: { type: 'string' },
-          },
-          required: ['token'],
-        },
-      },
-      {
-        name: 'auth_resend_verification',
-        description: 'Resend email verification link (requires auth)',
-        inputSchema: { type: 'object', properties: {} },
-      },
-      {
-        name: 'auth_request_password_reset',
-        description: 'Request a password reset email',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            email: { type: 'string', format: 'email' },
-          },
-          required: ['email'],
-        },
-      },
-      {
-        name: 'auth_reset_password',
-        description: 'Reset password using token from reset email',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            token: { type: 'string' },
-            newPassword: { type: 'string', minLength: 8, maxLength: 128 },
-          },
-          required: ['token', 'newPassword'],
-        },
-      },
-      {
-        name: 'upload_init',
-        description: 'Initialize a chunked file upload session (requires auth)',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            filename: { type: 'string' },
-            contentType: { type: 'string' },
-            totalSize: { type: 'number', description: 'File size in bytes (max 100MB)' },
-          },
-          required: ['filename', 'contentType', 'totalSize'],
-        },
-      },
-      {
-        name: 'upload_chunk',
-        description: 'Upload a single chunk of a file (requires auth)',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            uploadId: { type: 'string' },
-            index: { type: 'number', description: 'Zero-based chunk index' },
-          },
-          required: ['uploadId', 'index'],
-        },
-      },
-      {
-        name: 'upload_complete',
-        description: 'Complete a chunked upload and assemble the file (requires auth)',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            uploadId: { type: 'string' },
-          },
-          required: ['uploadId'],
-        },
-      },
-      {
-        name: 'upload_cancel',
-        description: 'Cancel an upload and clean up chunks (requires auth)',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            uploadId: { type: 'string' },
-          },
-          required: ['uploadId'],
-        },
-      },
-      {
-        name: 'ws_connect',
-        description: 'Connect to WebSocket endpoint for real-time messaging',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            token: { type: 'string', description: 'JWT access token for authentication' },
-          },
-          required: ['token'],
-        },
-      },
-      {
-        name: 'world_ws_connect',
-        description: 'Connect to World WebSocket endpoint for 3D city snapshot/resume stream',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            token: { type: 'string', description: 'JWT access token for authentication' },
-            resumeToken: { type: 'string', description: 'Optional token for stream resume' },
-            lastSeq: { type: 'number', minimum: 0, description: 'Optional last applied sequence' },
-          },
-          required: ['token'],
-        },
-      },
-      {
-        name: 'builder_generate',
-        description:
-          'Generate production-ready API endpoints from a natural language prompt. Creates schemas, models, services, routes, and tests, then opens a PR on GitHub. Requires admin role.',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            prompt: {
-              type: 'string',
-              minLength: 10,
-              maxLength: 2000,
-              description: 'Natural language description of the API feature to build',
-            },
-            options: {
-              type: 'object',
-              properties: {
-                dryRun: {
-                  type: 'boolean',
-                  default: false,
-                  description: 'If true, generate code but do not write files or create PR',
-                },
-                includeModel: {
-                  type: 'boolean',
-                  default: true,
-                  description: 'Generate Mongoose model',
-                },
-                includeTests: {
-                  type: 'boolean',
-                  default: true,
-                  description: 'Generate test files',
-                },
-              },
-            },
-          },
-          required: ['prompt'],
-        },
-      },
-      {
-        name: 'builder_get_job',
-        description: 'Get the status and result of a builder job by ID',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            jobId: { type: 'string', description: 'The builder job ID' },
-          },
-          required: ['jobId'],
-        },
-      },
-      {
-        name: 'builder_list_jobs',
-        description: 'List builder jobs with optional status filter and cursor pagination',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            status: {
-              type: 'string',
-              enum: [
-                'queued',
-                'reading_context',
-                'generating',
-                'writing_files',
-                'validating',
-                'creating_pr',
-                'completed',
-                'failed',
-              ],
-              description: 'Filter by job status',
-            },
-            cursor: { type: 'string', description: 'Pagination cursor' },
-            limit: { type: 'number', minimum: 1, maximum: 100, default: 20 },
-          },
-        },
-      },
-    ],
+    tools: server.listToolDefinitions(),
     resources: [
       {
         uri: 'fenice://docs/openapi',
@@ -304,16 +84,53 @@ mcpRouter.get('/mcp', async (c) => {
         description: 'Full OpenAPI 3.1 JSON specification',
         mimeType: 'application/json',
       },
-      {
-        uri: 'fenice://docs/llm',
-        name: 'LLM Documentation',
-        description: 'Markdown documentation optimized for AI consumption',
-        mimeType: 'text/markdown',
-      },
     ],
     instructions:
-      'FENICE is an AI-native REST API. Use the tools above to interact with authentication, user management, file uploads, world projection, real-time WebSocket messaging, and the AI builder. The builder_generate tool creates production-ready API endpoints from natural language prompts and opens GitHub PRs (admin role required). All tool calls map to REST endpoints. Authentication required for most operations — obtain tokens via auth_login first. WebSocket connections require a valid JWT token.',
+      'Connect via POST /api/v1/mcp/rpc with a JWT bearer token (role >= agent). Send `initialize` first, then use `tools/list` and `tools/call`. The `Mcp-Session-Id` header carries the session id returned by initialize.',
   });
+});
+
+// ─── POST /mcp/rpc — operational JSON-RPC dispatcher ───────────────────────
+
+mcpRouter.post('/mcp/rpc', authMiddleware, requireRole('agent'), async (c) => {
+  if (process.env['MCP_ENABLED'] === 'false') {
+    return c.json(
+      { jsonrpc: '2.0', id: null, error: { code: -32004, message: 'MCP server disabled' } },
+      503
+    );
+  }
+
+  let body: unknown;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json(
+      { jsonrpc: '2.0', id: null, error: { code: -32700, message: 'Parse error' } },
+      400
+    );
+  }
+
+  // Identity bound to the JWT-verified context. Sessions begin on `initialize`
+  // and are looked up via the `Mcp-Session-Id` header on subsequent calls.
+  const sessionId = c.req.header('mcp-session-id') ?? '';
+  const userId = c.get('userId');
+  const userRole = c.get('role');
+
+  const isInitialize =
+    typeof body === 'object' && body !== null && (body as JsonRpcRequest).method === 'initialize';
+
+  const identity: AgentIdentity | null = isInitialize
+    ? null
+    : sessionId
+      ? { sessionId, userId, userRole }
+      : null;
+
+  const server = getServer();
+  const response = await server.dispatch(body, identity);
+
+  // JSON-RPC error responses are still HTTP 200 per spec; errors are signalled
+  // by the `error` field, not the status code.
+  return c.json(response);
 });
 
 export { mcpRouter };

@@ -2,12 +2,13 @@ import type { MiddlewareHandler } from 'hono';
 import { createMiddleware } from 'hono/factory';
 import { ForbiddenError } from '../utils/errors.js';
 
-export type Role = 'superAdmin' | 'admin' | 'employee' | 'client' | 'vendor' | 'user';
+export type Role = 'superAdmin' | 'admin' | 'employee' | 'agent' | 'client' | 'vendor' | 'user';
 
 export const ROLE_HIERARCHY: Record<Role, number> = {
   superAdmin: 60,
   admin: 50,
   employee: 40,
+  agent: 35,
   client: 30,
   vendor: 20,
   user: 10,
