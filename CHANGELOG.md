@@ -7,45 +7,69 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-04-30
+
 ### Added
 
-- **M5 Import Resolver**: dependency-aware context selection — follows import chains to auto-include relevant files for refactor, bugfix, test-gen, and schema-migration tasks
-- **M5 Strategy-based repair**: multi-retry recovery with targeted strategies (typecheck -> lint -> test -> all), up to 3 repair attempts instead of 1
-- **M5 Repair metadata**: `repairAttempts` and `repairStrategies` fields in job result for observability on draft PRs
-- **M5 Builder tools**: `search_files` (regex grep across project) and `list_files` (directory listing) for refactoring and exploration
-- **M5 Improved prompts**: step-by-step workflows for refactor, bugfix, test-gen, and schema-migration tasks
-- **M5 tests**: 35 new tests for import-resolver, strategy-based validator, and new tools (748 total, up from 713)
+#### M6 Cosmos (3D — Planetary Transformation)
 
-### Changed
+- Service stars on concentric rings (emissive sphere + glow + corona, color by service type)
+- Endpoint planets with method-based shapes (GET=sphere, POST=icosahedron, PUT=torus, DELETE=octahedron, PATCH=dodecahedron)
+- Curved luminous routes (CatmullRomCurve3 + TubeGeometry) with animated pulse along the curve
+- Wormhole auth gate effect (portal/transit visualization for auth-required services)
+- Orbital navigation: OrbitControls with smooth damping, click-to-focus camera animation, auto-rotate when idle
+- Cosmos / Tron mode switch via `view.store.ts` (Tron city retained as legacy mode)
+- Dark and light themes selectable from view store
+- Orbital layout engine in `utils/cosmos.ts` (concentric ring placement, non-overlapping planetary systems)
+- New components: `Cosmos.tsx`, `ServiceStar.tsx`, `EndpointPlanet.tsx`, `OrbitalPath.tsx`, `CurvedRoute.tsx`, `Wormhole.tsx`
 
-- Builder context reader now accepts `inferredFiles` parameter for dependency-resolved context
-- Builder service uses `categorizeErrors` + `pickRepairStrategy` instead of generic `formatValidationErrors` for repair loop
-- Task prompts expanded with concrete workflows and tool usage guidance
+#### M5 Builder v2 (Agent — Smart Context + Multi-Retry)
 
----
+- **Import Resolver**: dependency-aware context selection — follows import chains (depth 2) to auto-include relevant files for refactor, bugfix, test-gen, and schema-migration tasks
+- **Strategy-based repair**: multi-retry recovery with targeted strategies (typecheck → lint → test → all), up to 3 repair attempts instead of 1
+- **Repair metadata**: `repairAttempts` and `repairStrategies` fields in job result for observability on draft PRs
+- **New builder tools**: `search_files` (regex grep across project) and `list_files` (directory listing) added to the Claude tool-use loop
+- **Improved task prompts**: step-by-step workflows for refactor, bugfix, test-gen, and schema-migration tasks
 
-- **M4 Atmosphere**: post-processing pipeline (bloom, SSAO, depth of field, vignette, chromatic aberration, noise), cosmic skybox (star field, nebulae, dust particles), animated key light, ground fog, haze layers, pulse wave effect
-- **M4 Galaxy Settings panel**: real-time sliders for all atmosphere parameters (layout, stars, planets, routes, bloom, post-processing, atmosphere, camera)
-- **Cinematic camera system**: 5 keyframe-based presets (Grand Orbit, Flythrough, Top-Down Sweep, Dramatic Rise, Nebula Tour) with smooth-step easing, play/pause/stop/speed controls
-- **Ultra quality mode**: custom GLSL shader nebulae (6-octave fBM simplex noise, 7 palettes), 12,000 spectral-class stars, 2,500 dust particles with trails, extended far plane
-- **Rich nebulae**: multi-layer procedural textures with 5 astronomical palettes (Helix, Carina, Eagle, Orion, Cat's Eye), annular ring structure, bright knots, filaments
-- **FPS counter**: real-time frame rate display in HUD (color-coded: green/yellow/red)
-- **Cosmos settings store**: Zustand store for all tunable 3D scene parameters with reset-to-defaults
-- **Cinematic store**: Zustand store for camera preset playback state
-- **M3 AI Builder pipeline**: prompt-to-PR code generation via Claude API with tool use
+#### M4 Atmosphere (3D — Cinematic Visuals)
+
+- Post-processing pipeline: bloom (UnrealBloomPass), SSAO, depth of field, vignette, chromatic aberration, film grain
+- Cosmic skybox: star field, nebulae, dust particles, animated key light, ground fog, haze layers, pulse wave effect
+- Galaxy Settings panel: real-time sliders for all atmosphere parameters (layout, stars, planets, routes, bloom, post-processing, atmosphere, camera)
+- Cinematic camera system: 5 keyframe-based presets (Grand Orbit, Flythrough, Top-Down Sweep, Dramatic Rise, Nebula Tour) with smooth-step easing, play/pause/stop/speed controls
+- Ultra quality mode: custom GLSL shader nebulae (6-octave fBM simplex noise, 7 palettes), 12,000 spectral-class stars, 2,500 dust particles with trails, extended far plane
+- Rich nebulae: multi-layer procedural textures with 5 astronomical palettes (Helix, Carina, Eagle, Orion, Cat's Eye), annular ring structure, bright knots, filaments
+- FPS counter: real-time frame rate display in HUD (color-coded green/yellow/red)
+- `cosmos-settings.store.ts`: Zustand store for all tunable 3D scene parameters with reset-to-defaults
+- Cinematic store: Zustand store for camera preset playback state
+
+#### M3.1 Two-Phase Builder (Agent — Plan/Approve Gate)
+
+- Plan-then-generate pipeline with user approval gate
+- New pipeline states: `queued → planning → plan_ready → [approve/reject] → reading_context → generating → ... → completed` (11 states total)
+- Plan generation via single Claude API call returning structured file manifest (path, type, action, description)
+- New routes: `POST /api/v1/builder/jobs/:id/approve` and `POST /api/v1/builder/jobs/:id/reject` (admin-only)
+- Plan review UI in BuilderPromptBar: editable file manifest with type badges, inline description editing, approve/reject buttons
+- Glowy animated loading bar with CSS keyframe animations (shimmer, glow, pulse, indeterminate)
+- Context reduction for plan-constrained generation (~40-50% fewer tokens)
+- 10-minute timeout guard on both planning and generation phases
+- Plan field added to BuilderJob model and schema (Mongoose sub-schema + Zod)
+
+#### M3 AI Builder Pipeline (Agent — Prompt to PR)
+
+- Prompt-to-PR code generation via Claude API with tool use (multi-turn loop: write_file, modify_file, read_file)
 - Builder routes: `POST /api/v1/builder/generate`, `GET /api/v1/builder/jobs/:id`, `GET /api/v1/builder/jobs`
-- Builder job model with MongoDB audit trail (status tracking across 11 pipeline states)
+- Builder job model with MongoDB audit trail (status tracking across pipeline states)
 - Scope policy engine: path whitelist/blacklist, forbidden path detection, dangerous content scanning
 - Context reader: builds LLM context bundle from project codebase (CLAUDE.md, schemas, models, services, routes)
-- Code generator: multi-turn Claude API loop with write_file, modify_file, read_file tools
-- Self-repair: validation failure triggers one repair attempt via Claude before failing
+- Self-repair: validation failure triggers repair attempt via Claude before failing
 - Project validator: runs typecheck, lint, and test via child_process with 60s timeout
 - File writer with scope policy enforcement and recursive directory creation
 - Git operations: branch creation, commit with conventional format, push, cleanup via simple-git
 - GitHub PR creation via Octokit with structured body (summary, file lists, risk checklist)
 - Builder world notifier: emits `builder.progress` delta events and synthetic service/endpoint deltas via WebSocket
-- `builder.progress` event type added to WorldDeltaEvent discriminated union (9th event type)
-- Builder tools added to MCP manifest (builder_generate, builder_get_job, builder_list_jobs)
+- `builder.progress` event type added to WorldDeltaEvent discriminated union
+- Builder tools registered in MCP manifest (`builder_generate`, `builder_get_job`, `builder_list_jobs`)
 - Builder env vars: `BUILDER_ENABLED`, `ANTHROPIC_API_KEY`, `GITHUB_TOKEN`, `GITHUB_OWNER`, `GITHUB_REPO`, `BUILDER_RATE_LIMIT_MAX`, `BUILDER_RATE_LIMIT_WINDOW_MS`
 - Pino logger redaction for sensitive keys (ANTHROPIC_API_KEY, GITHUB_TOKEN, JWT secrets)
 - Builder kill switch: `BUILDER_ENABLED=false` returns 503
@@ -58,16 +82,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `builder.progress` delta event forwarding from world store to builder store
 - Seed admin user (`admin@formray.io`) created automatically on every server start
 - `detail` field on `builder.progress` delta events for granular tool activity reporting
-- **M3.1 Two-Phase Builder**: plan-then-generate pipeline with user approval gate
-- Two-phase pipeline: `queued → planning → plan_ready → [approve/reject] → reading_context → generating → ... → completed`
-- Plan generation via single Claude API call returning structured file manifest (path, type, action, description)
-- `POST /api/v1/builder/jobs/:id/approve` and `POST /api/v1/builder/jobs/:id/reject` endpoints (admin-only)
-- Plan review UI in BuilderPromptBar: editable file manifest with type badges, inline description editing, approve/reject buttons
-- Glowy animated loading bar with CSS keyframe animations (shimmer, glow, pulse, indeterminate)
-- Context reduction for plan-constrained generation (~40-50% fewer tokens)
-- 10-minute timeout guard on both planning and generation phases
-- Plan field added to BuilderJob model and schema (Mongoose sub-schema + Zod)
-- 560 server tests across 61 test files + 159 client tests across 12 test files
+
+#### M2 World Model + Realtime Stream (3D — Foundation)
 
 - World model Zod schemas (WorldService, WorldEndpoint, WorldEdge, WorldModel) with schema version 1
 - ProjectionService for OpenAPI 3.x to WorldModel transformation (tag grouping, pairwise edges, auth detection)
@@ -76,21 +92,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - World WS message handlers for subscribe flow (full snapshot and resume with catch-up) and ping/pong keepalive
 - World Gateway WebSocket endpoint at `GET /api/v1/world-ws` with JWT query-param authentication
 - Environment variables: `WORLD_WS_BUFFER_SIZE` (default 1000), `WORLD_WS_RESUME_TTL_MS` (default 5min)
-- Integration tests for ProjectionService (live OpenAPI parsing) and World WS (subscribe, snapshot, resume flows)
-- Unit tests for world schemas, projection service, world WS manager, and world handlers (97 new tests)
 - React + R3F client scaffold (`client/`) with Vite 6, React 19, Three.js 0.173, Zustand 5
 - Client-side WorldModel types mirroring backend Zod schemas (plain TypeScript interfaces)
 - WebSocket connection hook with auto-reconnect (3s), ping/pong (25s), and resume token support
 - Zustand stores for world state and building selection
 - Deterministic grid layout service (services → districts, endpoints → buildings)
-- 3D city renderer: buildings colored by HTTP method, hover glow, click selection
+- 3D city renderer (Tron mode): buildings colored by HTTP method, hover glow, click selection
 - District ground planes with service tag labels and edge connectors
 - HUD overlay with connection status indicator and HTTP method color legend
 - Side panel with endpoint details (path, method, summary, auth, params, related endpoints)
 - Client CI job (lint, typecheck, test, build) in GitHub Actions
-- Client unit tests for layout service, Zustand store, and color mappings (24 new tests)
-- WS protocol contract tests validating producer/consumer message schemas (31 tests)
-- Demo dry run e2e tests verifying M1 acceptance criteria: 100% endpoint mapping, zero crashes, performance under 1.2s, correct metadata, building non-overlap (23 tests)
 - 3D world docs index (`docs/3d-world/README.md`) and M2 realtime overlay execution plan
 
 ### Fixed
@@ -99,6 +110,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - World WS resume validation now rejects future timestamps in resume tokens
 - Client WS hook hardened against malformed messages and stale socket lifecycle race conditions
 - Setup/bootstrap docs updated for 3D client token flow (`client/.env.example`, Quickstart, root README)
+
+### Tests
+
+- 748 server tests across 66 test files (up from 560 at v0.3.0): added M5 import-resolver, strategy-based validator, search_files/list_files (35 new), M3.1 two-phase pipeline, M3 builder pipeline, M2 world projection (97 new)
+- 244 client tests across 20 test files (up from 159): added M6 cosmos layout, planet shapes, theme switching, M4 atmosphere, settings panel, cinematic preset playback
+
+### Security
+
+- Patched security vulnerabilities in `hono`, `minimatch`, `fast-xml-parser` (transitive)
 
 ## [0.3.0] - 2026-02-21
 

@@ -107,7 +107,7 @@ app.doc('/openapi', (c) => ({
   openapi: '3.1.0',
   info: {
     title: 'FENICE API',
-    version: '0.3.0',
+    version: '0.4.0',
     description:
       'AI-native, production-ready backend API — Formray Engineering Guidelines compliant',
   },
@@ -129,7 +129,7 @@ app.get('/docs/llm', (c) => {
     openapi: '3.1.0',
     info: {
       title: 'FENICE API',
-      version: '0.3.0',
+      version: '0.4.0',
       description:
         'AI-native, production-ready backend API — Formray Engineering Guidelines compliant',
     },

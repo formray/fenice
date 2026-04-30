@@ -52,11 +52,14 @@ const healthDetailedRoute = createRoute({
 });
 
 healthRouter.openapi(healthRoute, (c) => {
-  return c.json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-  }, 200);
+  return c.json(
+    {
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+    },
+    200
+  );
 });
 
 healthRouter.openapi(healthDetailedRoute, async (c) => {
@@ -66,17 +69,20 @@ healthRouter.openapi(healthDetailedRoute, async (c) => {
 
   const overallStatus = mongoStatus === 'ok' ? 'ok' : 'degraded';
 
-  return c.json({
-    status: overallStatus,
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    dependencies: {
-      mongodb: {
-        status: mongoStatus,
-        responseTime: mongoResponseTime,
+  return c.json(
+    {
+      status: overallStatus,
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      dependencies: {
+        mongodb: {
+          status: mongoStatus,
+          responseTime: mongoResponseTime,
+        },
       },
     },
-  }, 200);
+    200
+  );
 });
 
 export { healthRouter };

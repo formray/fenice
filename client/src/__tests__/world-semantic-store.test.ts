@@ -103,39 +103,33 @@ describe('world.store — semantic integration', () => {
   it('setWorldModel resets stale metrics classifier state', () => {
     useWorldStore.getState().setSessionState('valid');
 
-    useWorldStore
-      .getState()
-      .applyDelta(
-        makeDelta(11, [
-          {
-            type: 'endpoint.metrics.updated',
-            entityId: 'ep:public',
-            payload: { rps: 10, p50: 30, p95: 700, errorRate: 0.01 },
-          },
-        ])
-      );
-    useWorldStore
-      .getState()
-      .applyDelta(
-        makeDelta(12, [
-          {
-            type: 'endpoint.metrics.updated',
-            entityId: 'ep:public',
-            payload: { rps: 12, p50: 40, p95: 650, errorRate: 0.02 },
-          },
-        ])
-      );
-    useWorldStore
-      .getState()
-      .applyDelta(
-        makeDelta(13, [
-          {
-            type: 'endpoint.metrics.updated',
-            entityId: 'ep:public',
-            payload: { rps: 11, p50: 35, p95: 600, errorRate: 0.01 },
-          },
-        ])
-      );
+    useWorldStore.getState().applyDelta(
+      makeDelta(11, [
+        {
+          type: 'endpoint.metrics.updated',
+          entityId: 'ep:public',
+          payload: { rps: 10, p50: 30, p95: 700, errorRate: 0.01 },
+        },
+      ])
+    );
+    useWorldStore.getState().applyDelta(
+      makeDelta(12, [
+        {
+          type: 'endpoint.metrics.updated',
+          entityId: 'ep:public',
+          payload: { rps: 12, p50: 40, p95: 650, errorRate: 0.02 },
+        },
+      ])
+    );
+    useWorldStore.getState().applyDelta(
+      makeDelta(13, [
+        {
+          type: 'endpoint.metrics.updated',
+          entityId: 'ep:public',
+          payload: { rps: 11, p50: 35, p95: 600, errorRate: 0.01 },
+        },
+      ])
+    );
     expect(useWorldStore.getState().endpointSemantics['ep:public']?.linkState).toBe('degraded');
 
     useWorldStore.getState().setWorldModel(
@@ -166,39 +160,33 @@ describe('world.store — semantic integration', () => {
   it('endpoint.removed clears stale overlay/classifier for id reuse', () => {
     useWorldStore.getState().setSessionState('valid');
 
-    useWorldStore
-      .getState()
-      .applyDelta(
-        makeDelta(11, [
-          {
-            type: 'endpoint.metrics.updated',
-            entityId: 'ep:public',
-            payload: { rps: 10, p50: 30, p95: 700, errorRate: 0.01 },
-          },
-        ])
-      );
-    useWorldStore
-      .getState()
-      .applyDelta(
-        makeDelta(12, [
-          {
-            type: 'endpoint.metrics.updated',
-            entityId: 'ep:public',
-            payload: { rps: 12, p50: 40, p95: 650, errorRate: 0.02 },
-          },
-        ])
-      );
-    useWorldStore
-      .getState()
-      .applyDelta(
-        makeDelta(13, [
-          {
-            type: 'endpoint.metrics.updated',
-            entityId: 'ep:public',
-            payload: { rps: 11, p50: 35, p95: 600, errorRate: 0.01 },
-          },
-        ])
-      );
+    useWorldStore.getState().applyDelta(
+      makeDelta(11, [
+        {
+          type: 'endpoint.metrics.updated',
+          entityId: 'ep:public',
+          payload: { rps: 10, p50: 30, p95: 700, errorRate: 0.01 },
+        },
+      ])
+    );
+    useWorldStore.getState().applyDelta(
+      makeDelta(12, [
+        {
+          type: 'endpoint.metrics.updated',
+          entityId: 'ep:public',
+          payload: { rps: 12, p50: 40, p95: 650, errorRate: 0.02 },
+        },
+      ])
+    );
+    useWorldStore.getState().applyDelta(
+      makeDelta(13, [
+        {
+          type: 'endpoint.metrics.updated',
+          entityId: 'ep:public',
+          payload: { rps: 11, p50: 35, p95: 600, errorRate: 0.01 },
+        },
+      ])
+    );
     expect(useWorldStore.getState().endpointSemantics['ep:public']?.linkState).toBe('degraded');
 
     useWorldStore

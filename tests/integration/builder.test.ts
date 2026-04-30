@@ -221,7 +221,14 @@ describe('Builder routes', () => {
         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test' },
         body: JSON.stringify({
           plan: {
-            files: [{ path: 'src/schemas/x.schema.ts', type: 'schema', action: 'create', description: 'X' }],
+            files: [
+              {
+                path: 'src/schemas/x.schema.ts',
+                type: 'schema',
+                action: 'create',
+                description: 'X',
+              },
+            ],
             summary: 'Test',
           },
         }),
@@ -237,7 +244,14 @@ describe('Builder routes', () => {
         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test' },
         body: JSON.stringify({
           plan: {
-            files: [{ path: 'src/schemas/x.schema.ts', type: 'schema', action: 'create', description: 'X' }],
+            files: [
+              {
+                path: 'src/schemas/x.schema.ts',
+                type: 'schema',
+                action: 'create',
+                description: 'X',
+              },
+            ],
             summary: 'Test',
           },
         }),

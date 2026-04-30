@@ -13,12 +13,8 @@ describe('ConsoleMessagingAdapter', () => {
     });
 
     expect(spy).toHaveBeenCalledTimes(2);
-    expect(spy).toHaveBeenCalledWith(
-      expect.stringContaining('device-token-123')
-    );
-    expect(spy).toHaveBeenCalledWith(
-      expect.stringContaining('Test Notification')
-    );
+    expect(spy).toHaveBeenCalledWith(expect.stringContaining('device-token-123'));
+    expect(spy).toHaveBeenCalledWith(expect.stringContaining('Test Notification'));
     spy.mockRestore();
   });
 
@@ -34,9 +30,7 @@ describe('ConsoleMessagingAdapter', () => {
     });
 
     expect(spy).toHaveBeenCalledTimes(3);
-    expect(spy).toHaveBeenCalledWith(
-      expect.stringContaining('"action":"open_screen"')
-    );
+    expect(spy).toHaveBeenCalledWith(expect.stringContaining('"action":"open_screen"'));
     spy.mockRestore();
   });
 

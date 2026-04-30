@@ -6,7 +6,7 @@
 
 - **Repository:** `https://github.com/formray/fenice`
 - **Organization:** Formray
-- **Version:** 0.3.0 (latest on `main`)
+- **Version:** 0.4.0 (latest on `main`)
 - **License:** MIT
 - **Author:** Giuseppe Albrizio
 
@@ -81,7 +81,7 @@ npm run start          # Run compiled output (node dist/server.js)
 
 ### Commits
 - **Conventional Commits** required: `feat:`, `fix:`, `chore:`, `docs:`, `test:`, `refactor:`
-- Co-Author line: `Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>`
+- Co-Author line: `Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>`
 - Husky + lint-staged pre-commit hooks run ESLint + Prettier automatically
 
 ## Architecture
@@ -219,8 +219,45 @@ POST /api/v1/builder/generate  (JWT + admin + rate limit 5/hour)
 - **Timeouts:** 10-minute guard on both planning and generation phases
 - **M5 Smart context:** Import resolver follows dependency chains (depth 2) for refactor/bugfix/test-gen tasks
 - **M5 Multi-retry:** Strategy-based repair (typecheck -> lint -> test -> all), up to 3 attempts
+- **M5 Tools:** `search_files` (regex grep) + `list_files` (directory listing) added to Claude tool-use loop
 - **World integration:** `builder.progress` delta events + synthetic `service.upserted`/`endpoint.upserted` deltas
 - **Deps:** `@anthropic-ai/sdk`, `simple-git`, `@octokit/rest`
+
+### 3D World (M4 Atmosphere + M6 Cosmos)
+The client is a React 19 + R3F application that renders the API surface as a navigable cosmic universe.
+
+```
+client/src/
+  components/
+    Scene.tsx                # Root R3F canvas + post-processing pipeline
+    Cosmos.tsx               # Cosmos mode: stars, orbits, planets, routes
+    ServiceStar.tsx          # Service-as-star (emissive sphere + corona)
+    EndpointPlanet.tsx       # Endpoint-as-planet (shape by HTTP method)
+    OrbitalPath.tsx          # Semi-transparent orbital ellipses
+    CurvedRoute.tsx          # CatmullRom-curved luminous edge with pulse
+    Wormhole.tsx             # Auth gate as portal effect
+    Nebulae.tsx              # Multi-layer procedural nebula sprites
+    ShaderNebulae.tsx        # Ultra mode: GLSL fBM nebulae (7 palettes)
+    DustParticles.tsx        # Floating dust with sin/cos drift
+    CameraController.tsx     # OrbitControls + cinematic preset playback
+    CosmosSettings.tsx       # Galaxy Settings panel (real-time sliders)
+    HUD.tsx                  # Connection status, FPS, legend, prompt bar
+    atmosphere/
+      GroundFog.tsx          # FogExp2 + ground haze
+      HazeLayers.tsx         # Multi-layer atmospheric haze
+    builder/                 # Builder prompt bar + plan review UI
+  stores/
+    cosmos-settings.store.ts # Zustand store for tunable scene parameters
+    view.store.ts            # Cosmos/Tron mode + dark/light theme
+  utils/
+    cosmos.ts                # Orbital layout math (concentric rings)
+```
+
+- **Visual modes:** `cosmos` (planetary) and `tron` (legacy city) toggleable via view store
+- **Themes:** dark (default cosmic) and light
+- **Quality tiers:** standard, ultra (custom GLSL nebulae + 12k spectral stars + 2.5k dust)
+- **Cinematic camera:** 5 keyframe presets (Grand Orbit, Flythrough, Top-Down Sweep, Dramatic Rise, Nebula Tour)
+- **Post-processing:** UnrealBloomPass, SSAO, depth of field, vignette, chromatic aberration, film grain
 
 ## Testing
 
@@ -228,7 +265,7 @@ POST /api/v1/builder/generate  (JWT + admin + rate limit 5/hour)
 - **Property testing:** fast-check for schema validation properties
 - **Coverage:** v8 provider, thresholds at 60/40/50/60 (stmts/branches/funcs/lines). DB-dependent files (services, models, production adapters) excluded — need MongoDB integration tests.
 - **Test structure:** `tests/unit/`, `tests/integration/`, `tests/properties/`
-- **Current status:** 589 server tests across 66 test files + 159 client tests across 12 test files, all passing
+- **Current status:** 748 server tests across 66 test files + 244 client tests across 20 test files, all passing
 - **TDD preferred:** Write tests alongside or before implementation
 
 ## Common Gotchas
