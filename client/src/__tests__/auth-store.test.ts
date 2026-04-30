@@ -51,7 +51,7 @@ describe('auth.store', () => {
 
   describe('login', () => {
     it('stores access/refresh/user on success and persists to localStorage', async () => {
-      vi.spyOn(global, 'fetch').mockResolvedValueOnce(
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
         okResponse({
           user: fakeUser,
           tokens: { access: jwt(futureExp), refresh: 'r-1' },
@@ -68,7 +68,7 @@ describe('auth.store', () => {
     });
 
     it('surfaces server error in store and re-throws', async () => {
-      vi.spyOn(global, 'fetch').mockResolvedValueOnce(errResponse(401, 'Bad credentials'));
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(errResponse(401, 'Bad credentials'));
 
       await expect(useAuthStore.getState().login('a@b.com', 'wrong')).rejects.toThrow();
       expect(useAuthStore.getState().error).toBe('Bad credentials');
@@ -78,7 +78,7 @@ describe('auth.store', () => {
 
   describe('signup', () => {
     it('stores tokens + user on success', async () => {
-      vi.spyOn(global, 'fetch').mockResolvedValueOnce(
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
         okResponse({
           user: fakeUser,
           tokens: { access: jwt(futureExp), refresh: 'r-2' },
@@ -98,7 +98,7 @@ describe('auth.store', () => {
 
   describe('pasteToken', () => {
     it('verifies the token by hitting /users/me before storing', async () => {
-      const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValueOnce(okResponse(fakeUser));
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(okResponse(fakeUser));
 
       await useAuthStore.getState().pasteToken(jwt(futureExp));
 
@@ -112,7 +112,7 @@ describe('auth.store', () => {
     });
 
     it('rejects an invalid token', async () => {
-      vi.spyOn(global, 'fetch').mockResolvedValueOnce(errResponse(401, 'Invalid token'));
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(errResponse(401, 'Invalid token'));
 
       await expect(useAuthStore.getState().pasteToken('not-a-real-token')).rejects.toThrow();
       expect(useAuthStore.getState().accessToken).toBeNull();
@@ -122,7 +122,7 @@ describe('auth.store', () => {
 
   describe('logout', () => {
     it('clears state and localStorage even if the network call fails', async () => {
-      vi.spyOn(global, 'fetch').mockRejectedValueOnce(new Error('network'));
+      vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new Error('network'));
       useAuthStore.setState({
         accessToken: jwt(futureExp),
         refreshToken: 'r-x',
@@ -148,7 +148,7 @@ describe('auth.store', () => {
         refreshToken: 'r-old',
         user: fakeUser,
       });
-      vi.spyOn(global, 'fetch').mockResolvedValueOnce(
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
         okResponse({ access: jwt(futureExp), refresh: 'r-new' })
       );
 
@@ -163,7 +163,9 @@ describe('auth.store', () => {
         refreshToken: 'r-bad',
         user: fakeUser,
       });
-      vi.spyOn(global, 'fetch').mockResolvedValueOnce(errResponse(401, 'Invalid refresh token'));
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+        errResponse(401, 'Invalid refresh token')
+      );
 
       const ok = await useAuthStore.getState().tryRefresh();
       expect(ok).toBe(false);
