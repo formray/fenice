@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Cosmos client login UI
+
+- New auth Zustand store (`stores/auth.store.ts`) with `localStorage` persistence (key `fenice.auth`), supporting `login`, `signup`, `logout`, token refresh, and a dev `pasteToken` backdoor that verifies the JWT against `/api/v1/users/me` before storing.
+- Thin auth API client (`services/auth-api.ts`) covering `/api/v1/auth/{login,signup,refresh,logout}` plus `/api/v1/users/me` and JWT expiry helpers.
+- New `AuthGate` component wraps the app — until a token is present, the cosmos is hidden behind a cosmic-themed login card with three modes: `Sign in`, `Create account`, `Paste token`.
+- `LoginForm`, `SignupForm`, `TokenPasteForm` with shared inline styling (`auth/styles.ts`).
+- New `UserMenu` HUD overlay (top-left) showing username, role badge with role-color dot, full name + email, and a sign-out button. Roles map to the same color palette as agents.
+- `BuilderPromptBar` and `useWorldSocket` now consume the token from `useAuthStore` instead of `VITE_WS_TOKEN`. The env var is no longer read anywhere.
+- `client/.env.example` blanked out — login is in-app now. `QUICKSTART.md` updated to point at the UI flow.
+
+#### Tests
+
+- 12 new auth-store unit tests (login/signup/pasteToken happy + error paths, logout-on-network-fail tolerance, refresh success/failure/no-token, JWT expiry helpers). Total client tests: 270 / 23 files (was 258 / 22).
+
 ### Added — M7 closing (mutating tools wired to builder, run_tests, ActivityBeam)
 
 #### M7.b — Builder tools wired
