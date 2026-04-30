@@ -8,6 +8,7 @@ import { OrbitalPath } from './OrbitalPath';
 import { CurvedRoute } from './CurvedRoute';
 import { Wormhole } from './Wormhole';
 import { AgentSwarm } from './AgentSwarm';
+import { ActivityBeams } from './ActivityBeams';
 import { METHOD_COLORS, LINK_STATE_COLORS } from '../utils/colors';
 import { seededRandom, COSMOS_LAYOUT } from '../utils/cosmos';
 import { useCosmosSettingsStore } from '../stores/cosmos-settings.store';
@@ -138,6 +139,9 @@ export function Cosmos(): React.JSX.Element | null {
 
       {/* M7: connected MCP agents as drones in the cosmos */}
       <AgentSwarm />
+
+      {/* M7 close: activity beams from agent → target on tool calls */}
+      <ActivityBeams />
     </group>
   );
 }

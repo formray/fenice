@@ -1,13 +1,16 @@
 import { Hono } from 'hono';
+import { resolve } from 'node:path';
 import { authMiddleware } from '../middleware/auth.js';
 import { requireRole } from '../middleware/rbac.js';
 import { McpServer } from '../services/mcp/server.js';
 import { SessionManager } from '../services/mcp/session-manager.js';
 import { logBuffer } from '../services/mcp/log-buffer.js';
 import { computeHealthSummary } from '../utils/health.js';
+import { validateProject } from '../services/builder/validator.js';
 import type { McpToolContext, CallerIdentity } from '../services/mcp/types.js';
 import type { JsonRpcRequest } from '../schemas/mcp.schema.js';
 import type { WorldWsManager } from '../ws/world-manager.js';
+import type { BuilderService } from '../services/builder.service.js';
 
 type AuthEnv = {
   Variables: {
@@ -27,14 +30,19 @@ const mcpRouter = new Hono<AuthEnv>();
  */
 let openApiProvider: () => unknown = () => ({ openapi: '3.1.0', info: {}, paths: {} });
 let worldWsProvider: () => WorldWsManager | null = () => null;
+let builderProvider: () => BuilderService | null = () => null;
 
 export function setMcpProviders(providers: {
   getOpenApiDocument: () => unknown;
   getWorldWsManager?: () => WorldWsManager | null;
+  getBuilderService?: () => BuilderService | null;
 }): void {
   openApiProvider = providers.getOpenApiDocument;
   if (providers.getWorldWsManager) {
     worldWsProvider = providers.getWorldWsManager;
+  }
+  if (providers.getBuilderService) {
+    builderProvider = providers.getBuilderService;
   }
 }
 
@@ -57,7 +65,24 @@ function getServer(): McpServer {
       getHealthSummary: () => computeHealthSummary(),
       listAgentSessions: () => sessionManager.list(),
       logBuffer,
+      runValidator: async (steps) => {
+        const projectRoot = resolve(process.cwd());
+        const start = Date.now();
+        const result = await validateProject(projectRoot);
+        const filtered = steps?.length
+          ? result.errors.filter((s) => steps.includes(s.step))
+          : result.errors;
+        return {
+          passed: filtered.every((s) => s.passed),
+          steps: filtered.map((s) => ({ step: s.step, passed: s.passed, output: s.output })),
+          durationMs: Date.now() - start,
+        };
+      },
     };
+    const builder = builderProvider();
+    if (builder) {
+      ctx.getBuilderService = (): BuilderService => builder;
+    }
     serverInstance = new McpServer(ctx, sessionManager);
   }
   return serverInstance;

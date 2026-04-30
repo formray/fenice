@@ -86,7 +86,7 @@ describe('POST /api/v1/mcp/rpc — JSON-RPC transport', () => {
       { token, sessionId }
     );
     const listBody = (await listRes.json()) as { result: { tools: { name: string }[] } };
-    expect(listBody.result.tools.length).toBe(7);
+    expect(listBody.result.tools.length).toBe(10);
 
     const callRes = await rpc(
       {

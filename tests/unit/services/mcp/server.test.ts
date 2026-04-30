@@ -135,7 +135,7 @@ describe('McpServer', () => {
   });
 
   describe('tools/list', () => {
-    it('returns 7 tools (5 read-only + 2 stubbed mutators)', async () => {
+    it('returns 10 tools (5 read-only + 4 builder + run_tests)', async () => {
       const sessionId = await initialize(server);
       const res = await server.dispatch({ jsonrpc: '2.0', id: 2, method: 'tools/list' }, {
         sessionId,
@@ -144,8 +144,10 @@ describe('McpServer', () => {
       } satisfies CallerIdentity);
       if (!('result' in res)) throw new Error('expected result');
       const tools = (res.result as { tools: { name: string }[] }).tools;
-      expect(tools).toHaveLength(7);
+      expect(tools).toHaveLength(10);
       expect(tools.map((t) => t.name).sort()).toEqual([
+        'builder_get_job',
+        'builder_list_jobs',
         'check_health',
         'create_endpoint',
         'get_schema',
@@ -153,6 +155,7 @@ describe('McpServer', () => {
         'list_endpoints',
         'modify_endpoint',
         'query_logs',
+        'run_tests',
       ]);
     });
   });

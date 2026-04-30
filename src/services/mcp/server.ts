@@ -22,7 +22,13 @@ import { getSchemaTool } from './tools/get-schema.js';
 import { checkHealthTool } from './tools/check-health.js';
 import { listAgentsTool } from './tools/list-agents.js';
 import { queryLogsTool } from './tools/query-logs.js';
-import { createEndpointTool, modifyEndpointTool } from './tools/builder-stubs.js';
+import {
+  createEndpointTool,
+  modifyEndpointTool,
+  builderGetJobTool,
+  builderListJobsTool,
+} from './tools/builder.js';
+import { runTestsTool } from './tools/run-tests.js';
 
 /**
  * MCP server — handles JSON-RPC 2.0 requests over the wire protocol defined
@@ -48,6 +54,9 @@ export class McpServer {
     this.registerTool(queryLogsTool);
     this.registerTool(createEndpointTool);
     this.registerTool(modifyEndpointTool);
+    this.registerTool(builderGetJobTool);
+    this.registerTool(builderListJobsTool);
+    this.registerTool(runTestsTool);
   }
 
   registerTool(handler: ToolHandler): void {
@@ -223,7 +232,7 @@ export class McpServer {
     }
 
     try {
-      const result = await handler.handle(params.data.arguments, this.ctx);
+      const result = await handler.handle(params.data.arguments, this.ctx, caller);
       if (sessionId && this.sessionManager) {
         this.sessionManager.completeActivity(
           sessionId,

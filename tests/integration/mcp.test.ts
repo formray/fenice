@@ -26,12 +26,15 @@ describe('MCP Discovery Endpoint (legacy GET /api/v1/mcp)', () => {
     expect(toolNames).toContain('check_health');
     expect(toolNames).toContain('list_agents');
     expect(toolNames).toContain('query_logs');
+    expect(toolNames).toContain('builder_get_job');
+    expect(toolNames).toContain('builder_list_jobs');
 
-    // Mutating tools (admin-only, stubbed in M7.1)
+    // Mutating / admin tools
     expect(toolNames).toContain('create_endpoint');
     expect(toolNames).toContain('modify_endpoint');
+    expect(toolNames).toContain('run_tests');
 
-    expect(body.tools.length).toBe(7);
+    expect(body.tools.length).toBe(10);
   });
 
   it('includes the OpenAPI resource', async () => {

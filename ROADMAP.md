@@ -76,7 +76,7 @@ Track A (3D Visual)            Track B (Agent)
 |-----------|-------|--------|--------------|-------------|
 | **M5** | Agent | Done | M3.1 | **Builder v2** — Smart context (import resolver), multi-retry recovery (3 strategies), search_files/list_files tools, improved task prompts |
 | **M6** | 3D | Done | M4 | **Cosmos** — Service stars on concentric rings, endpoint planets (method-based shapes), curved luminous routes with pulse, wormhole auth gate, orbital navigation, cosmos/tron mode switch, dark/light themes |
-| **M7** | Bridge | Done | M5 + M6 | **MCP Live** — Operational JSON-RPC 2.0 MCP server, agent connection protocol, agent presence in 3D cosmos, activity-aware HUD. Mutating tools (create_endpoint, modify_endpoint) stubbed — wired to builder in M7.b |
+| **M7** | Bridge | Done | M5 + M6 | **MCP Live** — Operational JSON-RPC 2.0 MCP server, 10 tools (5 read-only + 4 builder + run_tests), agent presence in 3D cosmos with role-colored probes, activity-aware HUD, ActivityBeam tubes from agent → target on tool calls. Mutating tools delegate to two-phase builder (human plan-approval preserved). |
 | **M8** | Bridge | — | M6 + M7 | **Observability** — OTel data pipeline to 3D, traffic particles on routes, planet heatmaps (latency/errors), anomaly detection with visual alerts |
 | **M9** | Agent | — | M7 + M8 | **Agent Swarm** — Multi-agent orchestration (Generator, Reviewer, Tester, Monitor), task decomposition, A2A via FENICE hub, swarm visualization |
 | **M10** | 3D | — | M6 + M9 | **Interactive Design** — Drag & drop planet creation, visual schema editor, agent-assisted design, undo/redo timeline, template gallery |

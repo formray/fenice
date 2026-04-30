@@ -3,35 +3,10 @@ import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 import type { AgentEntity as AgentEntityType } from '../types/agent';
 import { ROLE_COLORS } from '../types/agent';
-import { seededRandom } from '../utils/cosmos';
+import { AGENT_LAYOUT, placeAgent } from '../utils/agent-placement';
 
 interface AgentEntityProps {
   agent: AgentEntityType;
-}
-
-const AGENT_LAYOUT = {
-  /** Distance from cosmos center where agents orbit. */
-  ringRadius: 35,
-  /** Vertical band where agents live. */
-  yMin: -5,
-  yMax: 8,
-  /** Body geometry. */
-  bodySize: 0.4,
-  glowSize: 1.4,
-  /** Slow orbit so motion is perceptible but not distracting. */
-  orbitSpeed: 0.04,
-  /** Spin while idle to show "alive". */
-  spinSpeed: 0.6,
-  /** Pulsation when busy. */
-  busyPulseSpeed: 4,
-  busyPulseAmplitude: 0.2,
-};
-
-/** Deterministic [angle, y] placement from agentId. */
-function placeAgent(agentId: string): { angle0: number; y: number } {
-  const angle0 = seededRandom(agentId, 0) * Math.PI * 2;
-  const y = AGENT_LAYOUT.yMin + seededRandom(agentId, 1) * (AGENT_LAYOUT.yMax - AGENT_LAYOUT.yMin);
-  return { angle0, y };
 }
 
 export function AgentEntity({ agent }: AgentEntityProps): React.JSX.Element {

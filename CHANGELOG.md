@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — M7 closing (mutating tools wired to builder, run_tests, ActivityBeam)
+
+#### M7.b — Builder tools wired
+
+- `create_endpoint` and `modify_endpoint` now delegate to the existing two-phase BuilderService (preserves human plan-approval gate). Agents get a `jobId` and can follow it.
+- New tools `builder_get_job` and `builder_list_jobs` (read-only, role >= agent) so agents can poll status without falling back to REST.
+- `modify_endpoint` enriches the prompt with the target path/method to anchor the builder.
+
+#### `run_tests` tool
+
+- Admin-only — runs the FENICE validator (typecheck + lint + test) and returns a per-step pass/fail breakdown.
+- Output truncated to 4k chars per step to avoid flooding the agent context.
+- Optional `steps` arg filters which steps to surface (validator still runs all three for now).
+
+#### ActivityBeam visual
+
+- New R3F components `ActivityBeam.tsx` and `ActivityBeams.tsx` — renders luminous CatmullRom-curved tubes from agent → target on every `agent.activity` (started) event with a target.
+- Tracks the agent's orbital position in real-time (curve recomputed each frame for the duration of the beam).
+- Color matches the agent's role; fades alpha linearly from 100% → 0% over the second half of the 2.5s lifetime.
+- Endpoint targets snap to the parent service-star position (planets orbit too quickly for a meaningful planet-position lookup).
+- `utils/agent-placement.ts` extracted so AgentEntity and ActivityBeam share the same orbital placement logic.
+
+#### Tool count
+
+| | Before M7 close | After |
+|---|---|---|
+| MCP tools | 7 (5 read-only + 2 stubs) | 10 (5 read-only + 4 builder + 1 run_tests) |
+| Mutating tools wired | 0 | 2 (`create_endpoint`, `modify_endpoint`) |
+| Stub tools remaining | 2 | 0 |
+
+#### Tests
+
+- +14 server tests (`builder-tool.test.ts`, `run_tests` unit tests) — total 805 server / 71 files
+- +5 client tests (`agent-placement.test.ts`) — total 258 client / 22 files
+
 ### Added — M7 MCP Live (Bridge — operational MCP server + agent presence in cosmos)
 
 #### M7.1 — Operational MCP server (server)

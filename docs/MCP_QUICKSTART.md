@@ -85,17 +85,27 @@ curl -X POST http://localhost:3000/api/v1/mcp/rpc \
   }'
 ```
 
-## Available tools (M7.1)
+## Available tools (M7 complete — 10 total)
 
-| Tool              | Min role | Description                                                      |
-| ----------------- | -------- | ---------------------------------------------------------------- |
-| `list_endpoints`  | agent    | API surface (filter by service or method)                        |
-| `get_schema`      | agent    | OpenAPI operation for a (path, method)                           |
-| `check_health`    | agent    | Same payload as GET /health/detailed                             |
-| `list_agents`     | agent    | Active MCP sessions                                              |
-| `query_logs`      | agent    | Search the in-memory ring buffer (last 200 records)              |
-| `create_endpoint` | admin    | Stubbed — wired to builder pipeline in M7.b                      |
-| `modify_endpoint` | admin    | Stubbed — wired to builder pipeline in M7.b                      |
+### Read-only (role >= agent)
+
+| Tool                | Description                                                                                            |
+| ------------------- | ------------------------------------------------------------------------------------------------------ |
+| `list_endpoints`    | API surface (filter by service or method)                                                              |
+| `get_schema`        | OpenAPI operation for a (path, method)                                                                 |
+| `check_health`      | Same payload as GET /health/detailed                                                                   |
+| `list_agents`       | Active MCP sessions                                                                                    |
+| `query_logs`        | Search the in-memory ring buffer (last 200 records)                                                    |
+| `builder_get_job`   | Status, plan, and result of a builder job by id                                                        |
+| `builder_list_jobs` | Paginated list of builder jobs with optional status filter                                             |
+
+### Mutating (role >= admin)
+
+| Tool              | Description                                                                                                |
+| ----------------- | ---------------------------------------------------------------------------------------------------------- |
+| `create_endpoint` | Triggers a builder job. Returns `jobId`. Plan must be approved by a human before code is generated.       |
+| `modify_endpoint` | Same as above but the prompt is enriched with the target path/method.                                      |
+| `run_tests`       | Runs `npm run validate` (typecheck + lint + test) and returns per-step pass/fail with truncated output.    |
 
 ## Available resources
 
@@ -156,9 +166,8 @@ Environment variables relevant to the MCP server:
 
 ## Roadmap
 
-- **M7.b** — wire `create_endpoint` and `modify_endpoint` to the
-  existing two-phase builder (preserves the human plan-approval gate)
-- **M8 Observability** — `query_logs` and `get_metrics` powered by
-  real OTel data, planet heatmaps reflect endpoint health
+- **M8 Observability** — `query_logs` and a new `get_metrics` tool powered
+  by real OTel data, planet heatmaps reflect endpoint health, anomaly
+  detection with visual alerts in the cosmos
 - **M9 Agent Swarm** — multi-agent orchestration (Generator, Reviewer,
   Tester, Monitor) with A2A communication via the FENICE hub

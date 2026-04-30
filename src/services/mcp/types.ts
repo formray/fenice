@@ -1,5 +1,6 @@
 import type { McpToolDefinition, McpToolsCallResult } from '../../schemas/mcp.schema.js';
 import type { LogRingBuffer } from './log-buffer.js';
+import type { BuilderService } from '../builder.service.js';
 
 /**
  * Context passed to every tool handler. Decouples tools from the Hono app
@@ -10,10 +11,18 @@ export interface McpToolContext {
   getOpenApiDocument(): unknown;
   /** Health check function — returns the same payload as GET /health/detailed. */
   getHealthSummary(): Promise<HealthSummary>;
-  /** Active agent sessions (read-only view). Empty in M7.1, populated in M7.2. */
+  /** Active agent sessions (read-only view). */
   listAgentSessions(): AgentSessionView[];
   /** Log ring buffer for query_logs. */
   logBuffer: LogRingBuffer;
+  /** Builder service for create_endpoint / modify_endpoint / builder_get_job. */
+  getBuilderService?(): BuilderService;
+  /** Run validate (typecheck + lint + test) for the run_tests tool. */
+  runValidator?(steps?: ('typecheck' | 'lint' | 'test')[]): Promise<{
+    passed: boolean;
+    steps: { step: string; passed: boolean; output: string }[];
+    durationMs: number;
+  }>;
 }
 
 export interface HealthSummary {
@@ -38,7 +47,8 @@ export interface ToolHandler {
   definition: McpToolDefinition;
   handle(
     args: Record<string, unknown> | undefined,
-    ctx: McpToolContext
+    ctx: McpToolContext,
+    caller: CallerIdentity
   ): Promise<McpToolsCallResult>;
 }
 

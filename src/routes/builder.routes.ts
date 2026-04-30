@@ -35,6 +35,11 @@ export function initBuilderService(wsManager: WorldWsManager): void {
   builderService = new BuilderService(wsManager);
 }
 
+/** Read-only accessor used by the MCP context provider. */
+export function getBuilderServiceForMcp(): BuilderService {
+  return getBuilderService();
+}
+
 function serializeJob(job: BuilderJobDocument): BuilderJob {
   const json = job.toJSON() as Record<string, unknown>;
   return {
